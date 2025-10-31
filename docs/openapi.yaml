@@ -1,0 +1,12 @@
+openapi: 3.0.3
+info:
+  title: API
+  version: 0.0.0
+  description: |
+    Initial API specification scaffold. No public endpoints are implemented yet.
+servers:
+  - url: http://localhost:8000
+    description: Local dev server (php artisan serve)
+paths: {}
+
+
