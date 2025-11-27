@@ -15,9 +15,9 @@ return new class extends Migration {
             $table->unsignedBigInteger('user_id')->unique();
             $table->string('first_name');
             $table->string('last_name');
+            $table->string('phone');
+            $table->string('nickname')->nullable();
             $table->string('bio')->nullable();
-            $table->string('instagram_handle')->nullable();
-            $table->string('tiktok_handle')->nullable();
             $table->string('profile_picture')->nullable();
             $table->timestamps();
         });

@@ -10,14 +10,19 @@ class CreatorProfile extends Model
         'user_id',
         'first_name',
         'last_name',
+        'nickname',
         'bio',
-        'instagram_handle',
-        'tiktok_handle',
+        'phone',
         'profile_picture',
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function getProfilePictureAttribute($value)
+    {
+        return $value ? asset('storage/' . $value) : null;
     }
 }

@@ -5,6 +5,7 @@ namespace Tests\Feature\Auth;
 use App\Enums\UserType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class SignupTest extends TestCase
@@ -100,5 +101,22 @@ class SignupTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors('email');
+    }
+
+    public function test_email_verification_notification_is_sent_on_signup(): void
+    {
+        Notification::fake();
+
+        $response = $this->postJson('/api/signup', [
+            'email' => 'test@example.com',
+            'password' => 'password',
+            'type' => UserType::BRAND->value,
+        ]);
+
+        $response->assertStatus(201);
+
+        $user = User::where('email', 'test@example.com')->first();
+
+        Notification::assertSentTo($user, \App\Notifications\Auth\QueuedVerifyEmail::class);
     }
 }
