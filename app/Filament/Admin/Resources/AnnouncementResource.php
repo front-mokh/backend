@@ -1,3 +1,7 @@
+<?php
+
+namespace App\Filament\Admin\Resources;
+
 use App\Filament\Admin\Resources\AnnouncementResource\Pages;
 use App\Filament\Admin\Resources\AnnouncementResource\RelationManagers;
 use App\Models\Announcement;
@@ -62,9 +66,12 @@ class AnnouncementResource extends Resource
                 Tables\Columns\TextColumn::make('user_id')
                     ->numeric()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('category.name')
+                Tables\Columns\TextColumn::make('category_id')
+                    ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('title')
+                    ->searchable(),
+                  Tables\Columns\TextColumn::make('status')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('budget_min')
                     ->numeric()
@@ -89,12 +96,7 @@ class AnnouncementResource extends Resource
                 Tables\Columns\TextColumn::make('influencer_tier_id')
                     ->numeric()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('thumbnail')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('attachment')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('status')
-                    ->searchable(),
+              
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
