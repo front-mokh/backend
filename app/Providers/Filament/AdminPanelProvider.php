@@ -2,6 +2,9 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Admin\Widgets\AnnouncementsByCategoryChart;
+use App\Filament\Admin\Widgets\LatestAnnouncementsWidget;
+use App\Filament\Admin\Widgets\LatestUsersWidget;
 use App\Filament\Admin\Widgets\StatsOverview;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -39,6 +42,9 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\\Filament\\Admin\\Widgets')
             ->widgets([
                 StatsOverview::class,
+                LatestAnnouncementsWidget::class,
+                LatestUsersWidget::class,
+                AnnouncementsByCategoryChart::class,
             ])
             ->middleware([
                 EncryptCookies::class,
