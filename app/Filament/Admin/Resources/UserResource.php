@@ -2,13 +2,16 @@
 
 namespace App\Filament\Admin\Resources;
 
+use App\Enums\UserType;
+use App\Filament\Admin\Resources\BrandProfileResource;
+use App\Filament\Admin\Resources\CreatorProfileResource;
 use App\Filament\Admin\Resources\UserResource\Pages;
-use App\Filament\Admin\Resources\UserResource\RelationManagers;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -58,9 +61,7 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('onboarding_completed_at')
                     ->dateTime()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('profile_verified_at')
-                    ->dateTime()
-                    ->sortable(),
+              
             ])
             ->filters([
                 //
@@ -72,6 +73,31 @@ class UserResource extends Resource
         ]),
             ])
             ->actions([
+                Action::make('view_profile')
+                    ->label('View Profile')
+                    ->icon('heroicon-o-user')
+                    ->url(function (User $record): ?string {
+                        if ($record->isBrand() && $record->brandProfile) {
+                            return BrandProfileResource::getUrl('edit', ['record' => $record->brandProfile]);
+                        }
+
+                        if ($record->isCreator() && $record->creatorProfile) {
+                            return CreatorProfileResource::getUrl('edit', ['record' => $record->creatorProfile]);
+                        }
+                        
+                        return null;
+                    })
+                    ->hidden(function (User $record): bool {
+                        if ($record->isBrand()) {
+                            return $record->brandProfile === null;
+                        }
+
+                        if ($record->isCreator()) {
+                            return $record->creatorProfile === null;
+                        }
+
+                        return true;
+                    }),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
