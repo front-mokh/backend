@@ -48,7 +48,7 @@ Route::get('/influencer-tiers', [InfluencerTierController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
-        return $request->user()->load(['brandProfile', 'creatorProfile', 'socialLinks']);
+        return $request->user()->load(['brandProfile.industries', 'creatorProfile', 'socialLinks', 'categories']);
     });
 
     // Announcements

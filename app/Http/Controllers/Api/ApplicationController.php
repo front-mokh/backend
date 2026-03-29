@@ -46,7 +46,7 @@ class ApplicationController extends Controller
                 ->whereHas('announcement', function ($q) use ($user) {
                     $q->where('user_id', $user->id);
                 })
-                ->with(['user.creatorProfile', 'user.socialLinks', 'announcement']);
+                ->with(['user.creatorProfile', 'user.socialLinks', 'user.categories', 'announcement']);
 
             if ($request->has('announcement_id')) {
                 $query->where('announcement_id', $request->announcement_id);
