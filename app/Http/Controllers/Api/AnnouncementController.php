@@ -67,7 +67,16 @@ class AnnouncementController extends Controller
             'platforms' => 'nullable|array',
             'platforms.*' => 'exists:platforms,id',
             'deliverables' => 'nullable|array',
-            'deliverables.*.id' => 'exists:deliverable_types,id',
+            'deliverables.*.id' => [
+                'exists:deliverable_types,id',
+                function ($attribute, $value, $fail) use ($request) {
+                    $platforms = $request->input('platforms', []);
+                    $deliverableType = \App\Models\DeliverableType::find($value);
+                    if ($deliverableType && !in_array($deliverableType->platform_id, $platforms)) {
+                        $fail('The requested deliverable type does not belong to any of the selected platforms.');
+                    }
+                },
+            ],
             'deliverables.*.quantity' => 'integer|min:1',
         ]);
 
