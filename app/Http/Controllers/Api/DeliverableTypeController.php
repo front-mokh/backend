@@ -8,8 +8,12 @@ use Illuminate\Http\Request;
 
 class DeliverableTypeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return DeliverableType::all();
+        $query = DeliverableType::query();
+        if ($request->has('platform_id')) {
+            $query->where('platform_id', $request->platform_id);
+        }
+        return $query->get();
     }
 }

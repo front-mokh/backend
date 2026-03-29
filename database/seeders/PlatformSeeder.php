@@ -24,16 +24,57 @@ class PlatformSeeder extends Seeder
             Platform::firstOrCreate(['name' => $platform['name']], $platform);
         }
 
-        $deliverables = [
-            ['name' => 'Post', 'icon_name' => 'image-outline'],
-            ['name' => 'Story', 'icon_name' => 'time-outline'],
-            ['name' => 'Reel / TikTok', 'icon_name' => 'videocam-outline'],
-            ['name' => 'Video YouTube', 'icon_name' => 'play-circle-outline'],
-            ['name' => 'Live', 'icon_name' => 'radio-outline'],
+        $deliverablesByPlatform = [
+            'Instagram' => [
+                ['name' => 'Post', 'icon_name' => 'image-outline'],
+                ['name' => 'Story', 'icon_name' => 'time-outline'],
+                ['name' => 'Reel', 'icon_name' => 'videocam-outline'],
+                ['name' => 'Live', 'icon_name' => 'radio-outline'],
+            ],
+            'TikTok' => [
+                ['name' => 'Video', 'icon_name' => 'videocam-outline'],
+                ['name' => 'Story', 'icon_name' => 'time-outline'],
+                ['name' => 'Live', 'icon_name' => 'radio-outline'],
+            ],
+            'YouTube' => [
+                ['name' => 'Video', 'icon_name' => 'play-circle-outline'],
+                ['name' => 'Short', 'icon_name' => 'videocam-outline'],
+                ['name' => 'Live', 'icon_name' => 'radio-outline'],
+                ['name' => 'Community Post', 'icon_name' => 'chatbox-outline'],
+            ],
+            'Snapchat' => [
+                ['name' => 'Snap', 'icon_name' => 'camera-outline'],
+                ['name' => 'Story', 'icon_name' => 'time-outline'],
+            ],
+            'Facebook' => [
+                ['name' => 'Post', 'icon_name' => 'image-outline'],
+                ['name' => 'Story', 'icon_name' => 'time-outline'],
+                ['name' => 'Video', 'icon_name' => 'play-circle-outline'],
+                ['name' => 'Live', 'icon_name' => 'radio-outline'],
+            ],
+            'LinkedIn' => [
+                ['name' => 'Post', 'icon_name' => 'document-text-outline'],
+                ['name' => 'Article', 'icon_name' => 'newspaper-outline'],
+                ['name' => 'Video', 'icon_name' => 'play-circle-outline'],
+            ],
+            'Twitter / X' => [
+                ['name' => 'Post', 'icon_name' => 'chatbubble-outline'],
+                ['name' => 'Thread', 'icon_name' => 'chatbubbles-outline'],
+                ['name' => 'Video', 'icon_name' => 'play-circle-outline'],
+            ]
         ];
 
-        foreach ($deliverables as $deliverable) {
-            DeliverableType::firstOrCreate(['name' => $deliverable['name']], $deliverable);
+        foreach ($deliverablesByPlatform as $platformName => $deliverables) {
+            $platform = Platform::where('name', $platformName)->first();
+            if ($platform) {
+                foreach ($deliverables as $deliverable) {
+                    $deliverable['platform_id'] = $platform->id;
+                    DeliverableType::firstOrCreate(
+                        ['name' => $deliverable['name'], 'platform_id' => $platform->id],
+                        $deliverable
+                    );
+                }
+            }
         }
     }
 }

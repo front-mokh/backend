@@ -2,9 +2,9 @@
 
 namespace App\Filament\Admin\Resources;
 
-use App\Filament\Admin\Resources\PlatformResource\Pages;
-use App\Filament\Admin\Resources\PlatformResource\RelationManagers;
-use App\Models\Platform;
+use App\Filament\Admin\Resources\DeliverableTypeResource\Pages;
+use App\Filament\Admin\Resources\DeliverableTypeResource\RelationManagers;
+use App\Models\DeliverableType;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -13,9 +13,9 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class PlatformResource extends Resource
+class DeliverableTypeResource extends Resource
 {
-    protected static ?string $model = Platform::class;
+    protected static ?string $model = DeliverableType::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
@@ -23,6 +23,9 @@ class PlatformResource extends Resource
     {
         return $form
             ->schema([
+                Forms\Components\Select::make('platform_id')
+                    ->relationship('platform', 'name')
+                    ->required(),
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255),
@@ -35,6 +38,9 @@ class PlatformResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('platform.name')
+                    ->sortable()
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
@@ -68,9 +74,9 @@ class PlatformResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListPlatforms::route('/'),
-            'create' => Pages\CreatePlatform::route('/create'),
-            'edit' => Pages\EditPlatform::route('/{record}/edit'),
+            'index' => Pages\ListDeliverableTypes::route('/'),
+            'create' => Pages\CreateDeliverableType::route('/create'),
+            'edit' => Pages\EditDeliverableType::route('/{record}/edit'),
         ];
     }
 }

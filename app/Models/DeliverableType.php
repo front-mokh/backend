@@ -6,7 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class DeliverableType extends Model
 {
-    protected $fillable = ['name', 'icon_name'];
+    protected $fillable = ['platform_id', 'name', 'icon_name'];
+
+    public function platform()
+    {
+        return $this->belongsTo(Platform::class);
+    }
 
     public function announcements()
     {

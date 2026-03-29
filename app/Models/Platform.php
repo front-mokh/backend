@@ -12,4 +12,9 @@ class Platform extends Model
     {
         return $this->belongsToMany(Announcement::class, 'announcement_platform');
     }
+
+    public function deliverableTypes()
+    {
+        return $this->hasMany(DeliverableType::class);
+    }
 }

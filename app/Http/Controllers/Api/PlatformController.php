@@ -10,6 +10,6 @@ class PlatformController extends Controller
 {
     public function index()
     {
-        return Platform::all();
+        return Platform::with('deliverableTypes')->get();
     }
 }
