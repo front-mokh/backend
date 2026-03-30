@@ -27,6 +27,11 @@ class Application extends Model
         return $this->belongsTo(Announcement::class);
     }
 
+    public function collaboration()
+    {
+        return $this->hasOne(Collaboration::class);
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

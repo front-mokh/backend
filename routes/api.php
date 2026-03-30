@@ -53,10 +53,19 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Announcements
     Route::apiResource('announcements', AnnouncementController::class);
+    Route::post('/announcements/{announcement}/close', [AnnouncementController::class, 'close']);
 
     // Applications
     Route::post('/announcements/{announcement}/apply', [ApplicationController::class, 'store']);
     Route::get('/applications', [ApplicationController::class, 'index']); // Brand views applications for their announcements
     Route::post('/applications/{application}/accept', [ApplicationController::class, 'accept']);
     Route::post('/applications/{application}/reject', [ApplicationController::class, 'reject']);
+
+    // Collaborations
+    Route::get('/collaborations', [\App\Http\Controllers\Api\CollaborationController::class, 'index']);
+    Route::get('/collaborations/{collaboration}', [\App\Http\Controllers\Api\CollaborationController::class, 'show']);
+    Route::patch('/collaborations/{collaboration}/status', [\App\Http\Controllers\Api\CollaborationController::class, 'updateStatus']);
+    Route::post('/collaborations/{collaboration}/messages', [\App\Http\Controllers\Api\CollaborationController::class, 'sendMessage']);
+    Route::post('/collaborations/{collaboration}/submissions', [\App\Http\Controllers\Api\CollaborationController::class, 'submitDeliverable']);
+    Route::patch('/submissions/{submission}', [\App\Http\Controllers\Api\CollaborationController::class, 'updateSubmissionStatus']);
 });

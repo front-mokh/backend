@@ -103,4 +103,19 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(Application::class);
     }
+
+    public function collaborationsAsBrand()
+    {
+        return $this->hasMany(Collaboration::class, 'brand_id');
+    }
+
+    public function collaborationsAsCreator()
+    {
+        return $this->hasMany(Collaboration::class, 'creator_id');
+    }
+
+    public function messages()
+    {
+        return $this->hasMany(Message::class, 'sender_id');
+    }
 }

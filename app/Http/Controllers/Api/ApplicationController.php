@@ -21,6 +21,14 @@ class ApplicationController extends Controller
             return response()->json(['message' => 'You have already applied to this announcement'], 400);
         }
 
+        // Block apply if announcement is closed or expired
+        if ($announcement->status !== 'open') {
+            return response()->json(['message' => 'Cette annonce est clôturée et n\'accepte plus de candidatures.'], 403);
+        }
+        if ($announcement->deadline && $announcement->deadline->isPast()) {
+            return response()->json(['message' => 'La date limite pour postuler à cette annonce est dépassée.'], 403);
+        }
+
         $validated = $request->validate([
             'message' => 'required|string',
             'proposed_budget' => 'required|integer|min:0',
@@ -90,6 +98,18 @@ class ApplicationController extends Controller
         }
         
         $application->update(['status' => 'accepted']);
+
+        // Create the collaboration workspace
+        \App\Models\Collaboration::firstOrCreate(
+            ['application_id' => $application->id],
+            [
+                'announcement_id' => $application->announcement_id,
+                'brand_id' => $application->announcement->user_id,
+                'creator_id' => $application->user_id,
+                'status' => 'in_progress',
+            ]
+        );
+
         return response()->json($application);
     }
 

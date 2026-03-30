@@ -63,6 +63,11 @@ class Announcement extends Model
         return $this->hasMany(Application::class);
     }
 
+    public function collaborations()
+    {
+        return $this->hasMany(Collaboration::class);
+    }
+
     public function platforms()
     {
         return $this->belongsToMany(Platform::class, 'announcement_platform');
