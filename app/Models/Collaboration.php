@@ -14,12 +14,57 @@ class Collaboration extends Model
         'status',
         'started_at',
         'completed_at',
+        'brand_last_seen_at',
+        'creator_last_seen_at',
+        'brand_last_read_at',
+        'creator_last_read_at',
     ];
 
     protected $casts = [
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'brand_last_seen_at' => 'datetime',
+        'creator_last_seen_at' => 'datetime',
+        'brand_last_read_at' => 'datetime',
+        'creator_last_read_at' => 'datetime',
     ];
+
+    /**
+     * Check if a user is currently viewing this collaboration chat.
+     * Returns true if the user's last_seen_at is within the threshold.
+     */
+    public function isUserViewing(User $user, int $thresholdSeconds = 30): bool
+    {
+        $lastSeen = $user->id === $this->brand_id
+            ? $this->brand_last_seen_at
+            : $this->creator_last_seen_at;
+
+        if (!$lastSeen) {
+            return false;
+        }
+
+        return $lastSeen->diffInSeconds(now()) <= $thresholdSeconds;
+    }
+
+    /**
+     * Count unread messages for a given user in this collaboration.
+     * Messages sent by others after the user's last_read_at.
+     */
+    public function unreadCountFor(User $user): int
+    {
+        $lastReadAt = $user->id === $this->brand_id
+            ? $this->brand_last_read_at
+            : $this->creator_last_read_at;
+
+        $query = $this->messages()
+            ->where('sender_id', '!=', $user->id);
+
+        if ($lastReadAt) {
+            $query->where('created_at', '>', $lastReadAt);
+        }
+
+        return $query->count();
+    }
 
     public function application()
     {

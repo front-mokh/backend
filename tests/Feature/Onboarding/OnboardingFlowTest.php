@@ -3,6 +3,8 @@
 namespace Tests\Feature\Onboarding;
 
 use App\Enums\UserType;
+use App\Models\Category;
+use App\Models\Industry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,11 +16,16 @@ class OnboardingFlowTest extends TestCase
     public function test_verified_brand_user_can_create_brand_profile(): void
     {
         $user = User::factory()->create(['type' => UserType::BRAND]);
+        $industry = Industry::create(['name' => 'Tech']);
 
         $this->actingAs($user);
 
         $response = $this->postJson('/api/onboarding/brand', [
             'name' => 'My Brand',
+            'phone' => '0612345678',
+            'location' => 'Paris',
+            'links' => ['https://instagram.com/mybrand'],
+            'industries' => [$industry->id],
         ]);
 
         $response->assertStatus(201)
@@ -35,12 +42,16 @@ class OnboardingFlowTest extends TestCase
     public function test_verified_creator_user_can_create_creator_profile(): void
     {
         $user = User::factory()->create(['type' => UserType::CREATOR]);
+        $category = Category::create(['name' => 'Fashion']);
 
         $this->actingAs($user);
 
         $response = $this->postJson('/api/onboarding/creator', [
             'first_name' => 'John',
             'last_name' => 'Doe',
+            'phone' => '0612345678',
+            'links' => ['https://instagram.com/johndoe'],
+            'categories' => [$category->id],
         ]);
 
         $response->assertStatus(201)

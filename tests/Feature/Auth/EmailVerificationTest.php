@@ -3,7 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
-use Illuminate\Auth\Notifications\VerifyEmail;
+use App\Notifications\Auth\QueuedVerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
@@ -23,7 +23,7 @@ class EmailVerificationTest extends TestCase
 
         $user->sendEmailVerificationNotification();
 
-        Notification::assertSentTo($user, VerifyEmail::class, function ($notification) use ($user) {
+        Notification::assertSentTo($user, QueuedVerifyEmail::class, function ($notification) use ($user) {
             $verificationUrl = $notification->toMail($user)->actionUrl;
 
             $this->get($verificationUrl);
@@ -34,3 +34,4 @@ class EmailVerificationTest extends TestCase
         $this->assertNotNull($user->fresh()->email_verified_at);
     }
 }
+

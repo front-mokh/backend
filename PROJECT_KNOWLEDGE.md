@@ -1,6 +1,27 @@
 # Project Knowledge Base
 
 ## Recent Changes Log
+### [2026-04-04] Smart Messaging Notifications
+- **Status**: IMPLEMENTED
+- **Description**: Redesigned the messaging notification system to match state-of-the-art messaging apps (WhatsApp/Telegram). Messages no longer create entries in the notification list — the notification center is now reserved for platform events only (candidatures, deliverables). Push notifications for messages are throttled and presence-aware.
+- **Architecture — Two-Layer Smart Notifications**:
+    - **Layer 1 — Presence Detection**: Tracks `brand_last_seen_at` / `creator_last_seen_at` on each collaboration. If the recipient was seen in the last 30 seconds, notifications are skipped entirely (WebSocket delivers the message in real-time).
+    - **Layer 2 — Throttling**: When the recipient is away, only one push notification is sent per collaboration per 2-minute window (cache-based via `Cache::put()`).
+    - **Push-Only**: Messages send Expo push alerts without creating `AppNotification` DB records. The `sendPushOnly()` method in `NotificationService` handles this.
+- **Impact**:
+    - `database/migrations/2026_04_04_221800_add_read_tracking_to_collaborations.php`: New migration — adds `brand_last_seen_at`, `creator_last_seen_at`, `brand_last_read_at`, `creator_last_read_at` to `collaborations`.
+    - `app/Models/Collaboration.php`: Added `isUserViewing()` and `unreadCountFor()` helper methods.
+    - `app/Services/NotificationService.php`: Added `sendPushOnly()` method (push without DB record).
+    - `app/Http/Controllers/Api/CollaborationController.php`: Rewrote `sendMessage()` with 2-layer smart notifications; added `heartbeat()`, `markAsRead()`; `index()` now returns `unread_count`.
+    - `routes/api.php`: Added `POST /collaborations/{id}/heartbeat` and `POST /collaborations/{id}/read`.
+    - `react_native_app/mobile/lib/api.ts`: Added `unread_count` to `Collaboration` interface; added `sendHeartbeat()` and `markCollabAsRead()` API methods.
+- **TODO — Mobile Integration**:
+    - The mobile chat screen needs to call `api.sendHeartbeat(id)` every ~15 seconds via `setInterval` while the chat is open.
+    - Use `unread_count` from the collaborations list endpoint to show unread badges on the collaborations tab.
+- **Testing**:
+    - Migration ran successfully (batch 4).
+    - All 21 existing tests passed with 0 failures.
+
 ### [2025-11-21] Create Categories Endpoint
 - **Status**: IMPLEMENTING
 - **Description**: Created a new API endpoint to retrieve all categories with their `id`, `name`, and `description`.
@@ -101,29 +122,55 @@
     - **Queue Worker**: To process queued emails, a queue worker must be running (e.g., `php artisan queue:work`).
 
 ## Architecture Overview
-- System design patterns
-- Key architectural decisions and rationale
+- **Monorepo** — Laravel backend + React Native mobile app in `react_native_app/mobile/`
+- **API-first** — All client communication via JSON REST endpoints (`routes/api.php`)
+- **Token auth** — Laravel Sanctum personal access tokens, no sessions for API
+- **Real-time** — Laravel Reverb WebSocket server for message and notification broadcasting
+- **Admin** — Filament v3 panel at `/admin` with a separate `Admin` model and guard
+- **Notification pipeline** — Platform events (candidatures, deliverables): `NotificationService::send()` writes to `app_notifications` DB → Expo push → WebSocket broadcast. Chat messages: `NotificationService::sendPushOnly()` sends Expo push only (no DB record), with presence detection + 2-min throttle.
 
 ## Component Inventory
-- Major modules and their responsibilities
-- Inter-component relationships and data flow
+| Component | Responsibility |
+|-----------|---------------|
+| `Auth\SignupController` | User registration + queued email verification |
+| `Auth\LoginController` | Token issuance + logout (token revocation) |
+| `Onboarding\OnboardingController` | Brand & Creator profile creation + social links + categories |
+| `Api\AnnouncementController` | Campaign CRUD + close with authorization policies |
+| `Api\ApplicationController` | Apply to campaigns, accept/reject with collaboration creation |
+| `Api\CollaborationController` | Workspace: messaging, deliverable submissions, status updates |
+| `Api\NotificationController` | List, unread count, mark read, Expo push token registration |
+| `Services\NotificationService` | Unified service: DB notification + Expo push + WebSocket broadcast |
+| `Events\NewMessageEvent` | WebSocket broadcast for real-time messaging |
+| `Events\NewNotificationEvent` | WebSocket broadcast for real-time notifications |
+| `Policies\AnnouncementPolicy` | Authorization for announcement update/delete |
 
 ## Configuration Map
-- All config files and their purposes
-- Environment variables and their usage
-- Build and deployment configuration
+| File | Purpose |
+|------|---------|
+| `.env` | Environment variables (DB, Mail, Reverb, App key) |
+| `config/sanctum.php` | Sanctum token/guard config |
+| `config/reverb.php` | WebSocket server config |
+| `config/broadcasting.php` | Broadcast driver (reverb) |
+| `config/filament.php` | Admin panel configuration |
+| `routes/api.php` | All API route definitions |
+| `routes/channels.php` | WebSocket channel authorization |
 
 ## Data Flow & Integration Points
-- How data moves through the system
-- APIs, databases, external services
-- Authentication and authorization patterns
+1. **Auth flow**: Mobile → `POST /api/signup` → User created → Queued email verification → `POST /api/login` → Sanctum token returned
+2. **Campaign flow**: Brand creates announcement → Creators browse/filter → Creator applies → Brand accepts → Collaboration workspace created
+3. **Collaboration flow**: Messages via REST + WebSocket broadcast → Creator submits deliverables → Brand approves/rejects → Status updated to completed
+4. **Notification flow**: Controller action → `NotificationService::send()` → DB record + Expo push (if token) + WebSocket broadcast
 
 ## Testing Strategy
-- Current test patterns and coverage
-- Testing utilities and frameworks
-- Test data management
+- **Framework**: PHPUnit 11.5
+- **Existing tests**: Auth tests (`SignupTest`, `LoginTest`, `EmailVerificationTest`), Onboarding tests (`OnboardingFlowTest`, `OnboardingTest`), and `UserJourneyTest` (full signup → verify → login → onboard integration test)
+- **Test pattern**: Feature tests with `RefreshDatabase` trait, `Notification::fake()` for email assertions
+- **Run**: `php artisan test`
 
 ## Development Patterns
-- Code style and conventions
-- Common abstractions and utilities
-- Error handling patterns
+- **Enums**: `UserType`, `ProjectStatus`, `ApplicationStatus` backed enums for type safety
+- **Relationships**: Consistent Eloquent relationships with eager loading (e.g., `with()`, `load()`)
+- **Authorization**: Gate/Policy checks in controllers (e.g., `Gate::authorize('update', $announcement)`)
+- **Validation**: Inline validation rules with French error messages for user-facing endpoints
+- **File uploads**: Stored via `store()` to public disk (`announcements/`, `messages/`, `submissions/`)
+- **Message notifications**: Push-only (no DB record), throttled (1 per collab per 2 min), presence-aware (skipped if recipient is viewing chat). Uses `Cache` for throttle keys (`msg_push:{user_id}:{collab_id}`).

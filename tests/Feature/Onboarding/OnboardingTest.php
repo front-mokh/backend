@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Onboarding;
 
+use App\Enums\UserType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -10,25 +11,26 @@ class OnboardingTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_verified_user_can_access_onboarding(): void
+    public function test_verified_brand_user_can_access_onboarding_endpoint(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['type' => UserType::BRAND]);
 
         $this->actingAs($user);
 
-        $response = $this->getJson('/api/onboarding');
+        // Test that the onboarding endpoint exists and validates input
+        $response = $this->postJson('/api/onboarding/brand', []);
 
-        $response->assertStatus(200)
-            ->assertJsonFragment(['message' => 'Welcome to the onboarding process!']);
+        // Should get 422 (validation error) not 404, proving the route exists
+        $response->assertStatus(422);
     }
 
     public function test_unverified_user_cannot_access_onboarding(): void
     {
-        $user = User::factory()->unverified()->create();
+        $user = User::factory()->unverified()->create(['type' => UserType::BRAND]);
 
         $this->actingAs($user);
 
-        $response = $this->getJson('/api/onboarding');
+        $response = $this->postJson('/api/onboarding/brand', []);
 
         $response->assertStatus(403);
     }

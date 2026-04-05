@@ -31,6 +31,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'type',
         'onboarding_completed_at',
         'profile_verified_at',
+        'expo_push_token',
     ];
 
     /**
@@ -57,6 +58,20 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'type' => UserType::class,
         ];
+    }
+
+    /**
+     * Get a display name from brand or creator profile.
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        if ($this->isBrand() && $this->brandProfile) {
+            return $this->brandProfile->name;
+        }
+        if ($this->isCreator() && $this->creatorProfile) {
+            return $this->creatorProfile->nickname ?? ($this->creatorProfile->first_name . ' ' . $this->creatorProfile->last_name);
+        }
+        return $this->email;
     }
 
     public function brandProfile()

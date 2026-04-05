@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\ApplicationStatus;
 use App\Enums\ProjectStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
@@ -17,13 +18,13 @@ class AnnouncementController extends Controller
             ->withCount([
                 'applications',
                 'applications as applications_pending_count' => function ($query) {
-                    $query->where('status', 'pending');
+                    $query->where('status', ApplicationStatus::PENDING->value);
                 },
                 'applications as applications_accepted_count' => function ($query) {
-                    $query->where('status', 'accepted');
+                    $query->where('status', ApplicationStatus::ACCEPTED->value);
                 },
                 'applications as applications_rejected_count' => function ($query) {
-                    $query->where('status', 'rejected');
+                    $query->where('status', ApplicationStatus::REJECTED->value);
                 },
             ]);
 

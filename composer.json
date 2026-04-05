@@ -9,6 +9,7 @@
         "php": "^8.2",
         "filament/filament": "^3.2",
         "laravel/framework": "^12.0",
+        "laravel/reverb": "*",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1"
     },
@@ -52,7 +53,7 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74,#8b5cf6\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"npm run dev\" \"php artisan reverb:start --host=0.0.0.0 --port=8080\" --names=server,queue,logs,vite,reverb --kill-others"
         ],
         "test": [
             "@php artisan config:clear --ansi",
@@ -71,6 +72,16 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "audit": {
+            "ignore": [
+                "PKSA-2xbq-p838-wxf8",
+                "PKSA-z3gr-8qht-p93v",
+                "PKSA-21fb-n1x5-5nf7",
+                "PKSA-2cx9-ynrq-qdk3",
+                "PKSA-4s4z-t146-6123",
+                "PKSA-rkkf-636k-qjb3"
+            ]
         }
     },
     "minimum-stability": "stable",

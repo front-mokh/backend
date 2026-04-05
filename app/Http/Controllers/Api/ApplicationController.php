@@ -6,6 +6,7 @@ use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\Announcement;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class ApplicationController extends Controller
@@ -38,8 +39,18 @@ class ApplicationController extends Controller
             'user_id' => $request->user()->id,
             'message' => $validated['message'],
             'proposed_budget' => $validated['proposed_budget'],
-            'status' => 'pending',
+            'status' => ApplicationStatus::PENDING->value,
         ]);
+
+        // Notify Brand
+        $nickname = $request->user()->display_name;
+        NotificationService::send(
+            $announcement->user,
+            'new_candidature',
+            'Nouvelle candidature',
+            "{$nickname} a postulé à votre annonce {$announcement->title}.",
+            ['route' => '/brand/application-details/' . $application->id . '?announcementId=' . $announcement->id, 'params' => ['id' => $application->id, 'announcementId' => $announcement->id]]
+        );
 
         return response()->json($application, 201);
     }
@@ -75,32 +86,17 @@ class ApplicationController extends Controller
         }
     }
 
-    public function updateStatus(Request $request, Application $application)
-    {
-        // Ensure the authenticated user owns the announcement associated with this application
-        if ($request->user()->id !== $application->announcement->user_id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
 
-        $validated = $request->validate([
-            'status' => 'required|in:accepted,rejected,pending',
-        ]);
-
-        $application->update(['status' => $validated['status']]);
-
-        return response()->json($application);
-    }
-    
     public function accept(Request $request, Application $application)
     {
          if ($request->user()->id !== $application->announcement->user_id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
         
-        $application->update(['status' => 'accepted']);
+        $application->update(['status' => ApplicationStatus::ACCEPTED->value]);
 
         // Create the collaboration workspace
-        \App\Models\Collaboration::firstOrCreate(
+        $collaboration = \App\Models\Collaboration::firstOrCreate(
             ['application_id' => $application->id],
             [
                 'announcement_id' => $application->announcement_id,
@@ -108,6 +104,15 @@ class ApplicationController extends Controller
                 'creator_id' => $application->user_id,
                 'status' => 'in_progress',
             ]
+        );
+
+        // Notify Creator
+        NotificationService::send(
+            $application->user,
+            'candidature_accepted',
+            'Félicitations !',
+            "Votre candidature pour {$application->announcement->title} a été acceptée.",
+            ['route' => '/creator/collaboration-details/' . $collaboration->id, 'params' => ['id' => $collaboration->id]]
         );
 
         return response()->json($application);
@@ -119,7 +124,17 @@ class ApplicationController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
         
-        $application->update(['status' => 'rejected']);
+        $application->update(['status' => ApplicationStatus::REJECTED->value]);
+
+        // Notify Creator
+        NotificationService::send(
+            $application->user,
+            'candidature_rejected',
+            'Candidature refusée',
+            "Votre candidature pour {$application->announcement->title} n'a pas été retenue.",
+            ['route' => '/creator/applications']
+        );
+
         return response()->json($application);
     }
 }
