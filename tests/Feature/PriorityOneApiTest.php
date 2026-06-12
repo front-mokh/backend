@@ -92,6 +92,39 @@ class PriorityOneApiTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_announcement_show_includes_current_creator_application(): void
+    {
+        [, $creator, $application] = $this->createApplicationFixture();
+
+        $this->actingAs($creator);
+
+        $this->getJson("/api/announcements/{$application->announcement_id}")
+            ->assertOk()
+            ->assertJsonPath('current_user_application.id', $application->id)
+            ->assertJsonPath('current_user_application.status', ApplicationStatus::PENDING->value);
+    }
+
+    public function test_creator_cannot_apply_twice_to_same_announcement(): void
+    {
+        [, $creator, $application] = $this->createApplicationFixture();
+
+        $this->actingAs($creator);
+
+        $this->postJson("/api/announcements/{$application->announcement_id}/apply", [
+            'message' => 'Je veux encore postuler',
+            'proposed_budget' => 175,
+        ])
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Vous avez déjà postulé à cette annonce.');
+
+        $this->assertSame(
+            1,
+            Application::where('announcement_id', $application->announcement_id)
+                ->where('user_id', $creator->id)
+                ->count()
+        );
+    }
+
     private function createApplicationFixture(): array
     {
         $brand = User::factory()->create(['type' => UserType::BRAND]);

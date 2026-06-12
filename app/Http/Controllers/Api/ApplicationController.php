@@ -19,7 +19,7 @@ class ApplicationController extends Controller
 
         // Check if already applied
         if ($announcement->applications()->where('user_id', $request->user()->id)->exists()) {
-            return response()->json(['message' => 'You have already applied to this announcement'], 400);
+            return response()->json(['message' => 'Vous avez déjà postulé à cette annonce.'], 409);
         }
 
         // Block apply if announcement is closed or expired

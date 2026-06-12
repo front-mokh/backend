@@ -483,7 +483,7 @@ class ApiService {
   Future<Application> applyToAnnouncement(
     int announcementId,
     String message,
-    double proposedBudget,
+    int proposedBudget,
   ) async {
     final response = await _dio.post(
       '/announcements/$announcementId/apply',

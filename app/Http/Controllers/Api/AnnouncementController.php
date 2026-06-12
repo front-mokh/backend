@@ -112,9 +112,9 @@ class AnnouncementController extends Controller
         return $announcement->load(['category', 'platforms', 'deliverables', 'influencerTier']);
     }
 
-    public function show(Announcement $announcement)
+    public function show(Request $request, Announcement $announcement)
     {
-        return $announcement->load(['category', 'platforms', 'deliverables', 'influencerTier'])
+        $announcement->load(['category', 'platforms', 'deliverables', 'influencerTier', 'user.brandProfile'])
             ->loadCount([
                 'applications',
                 'applications as applications_pending_count' => function ($query) {
@@ -127,6 +127,18 @@ class AnnouncementController extends Controller
                     $query->where('status', 'rejected');
                 },
             ]);
+
+        if ($request->user()->isCreator()) {
+            $announcement->setRelation(
+                'currentUserApplication',
+                $announcement->applications()
+                    ->where('user_id', $request->user()->id)
+                    ->latest()
+                    ->first()
+            );
+        }
+
+        return $announcement;
     }
 
     public function update(Request $request, Announcement $announcement)

@@ -378,6 +378,7 @@ class Announcement {
   final int? applicationsPendingCount;
   final int? applicationsAcceptedCount;
   final int? applicationsRejectedCount;
+  final Application? currentUserApplication;
 
   Announcement({
     required this.id,
@@ -405,6 +406,7 @@ class Announcement {
     this.applicationsPendingCount,
     this.applicationsAcceptedCount,
     this.applicationsRejectedCount,
+    this.currentUserApplication,
   });
 
   factory Announcement.fromJson(Map<String, dynamic> json) {
@@ -456,6 +458,9 @@ class Announcement {
       applicationsRejectedCount: json['applications_rejected_count'] != null
           ? int.tryParse(json['applications_rejected_count'].toString())
           : null,
+      currentUserApplication: json['current_user_application'] != null
+          ? Application.fromJson(json['current_user_application'])
+          : null,
     );
   }
 
@@ -477,6 +482,11 @@ class Announcement {
     'status': status,
     'created_at': createdAt,
     'user': user?.toJson(),
+    'applications_count': applicationsCount,
+    'applications_pending_count': applicationsPendingCount,
+    'applications_accepted_count': applicationsAcceptedCount,
+    'applications_rejected_count': applicationsRejectedCount,
+    'current_user_application': currentUserApplication?.toJson(),
   };
 }
 
