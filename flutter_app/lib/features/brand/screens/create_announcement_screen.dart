@@ -11,7 +11,8 @@ import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
 
 class CreateAnnouncementScreen extends StatefulWidget {
-  const CreateAnnouncementScreen({super.key});
+  final int? announcementId;
+  const CreateAnnouncementScreen({super.key, this.announcementId});
 
   @override
   State<CreateAnnouncementScreen> createState() =>
@@ -36,6 +37,7 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
   final _budgetMaxController = TextEditingController();
   final _durationController = TextEditingController();
   final _minFollowersController = TextEditingController();
+  final _targetAudienceController = TextEditingController();
   final _requirementsController = TextEditingController();
 
   int _selectedCategoryId = 0;
@@ -46,6 +48,8 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
   String? _attachmentPath;
   final List<int> _selectedPlatforms = [];
   final List<Map<String, int>> _deliverables = []; // { id, quantity }
+
+  bool get _isEditing => widget.announcementId != null;
 
   @override
   void initState() {
@@ -61,6 +65,7 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
     _budgetMaxController.dispose();
     _durationController.dispose();
     _minFollowersController.dispose();
+    _targetAudienceController.dispose();
     _requirementsController.dispose();
     super.dispose();
   }
@@ -69,21 +74,32 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
     setState(() => _isLoading = true);
     try {
       final api = ApiService();
-      final results = await Future.wait([
-        api.getCategories(),
-        api.getPlatforms(),
-        api.getDeliverableTypes(),
-        api.getInfluencerTiers(),
-      ]);
+      final categoriesFuture = api.getCategories();
+      final platformsFuture = api.getPlatforms();
+      final deliverableTypesFuture = api.getDeliverableTypes();
+      final tiersFuture = api.getInfluencerTiers();
+      final announcementFuture = _isEditing
+          ? api.getAnnouncement(widget.announcementId!)
+          : Future<Announcement?>.value();
+
+      final categories = await categoriesFuture;
+      final platforms = await platformsFuture;
+      final deliverableTypes = await deliverableTypesFuture;
+      final tiers = await tiersFuture;
+      final announcement = await announcementFuture;
 
       setState(() {
-        _categories = results[0] as List<Category>;
-        _platforms = results[1] as List<PlatformModel>;
-        _deliverableTypes = results[2] as List<DeliverableType>;
-        _tiers = results[3] as List<InfluencerTier>;
+        _categories = categories;
+        _platforms = platforms;
+        _deliverableTypes = deliverableTypes;
+        _tiers = tiers;
 
         if (_categories.isNotEmpty) {
           _selectedCategoryId = _categories[0].id;
+        }
+
+        if (announcement != null) {
+          _prefillAnnouncement(announcement);
         }
       });
     } catch (e) {
@@ -98,6 +114,40 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _prefillAnnouncement(Announcement announcement) {
+    _titleController.text = announcement.title;
+    _descController.text = announcement.description;
+    _budgetMinController.text = announcement.budgetMin.toStringAsFixed(0);
+    _budgetMaxController.text = announcement.budgetMax.toStringAsFixed(0);
+    _durationController.text = announcement.duration?.toString() ?? '';
+    _minFollowersController.text = announcement.minFollowers?.toString() ?? '';
+    _targetAudienceController.text = announcement.targetAudience ?? '';
+    _requirementsController.text = announcement.requirements ?? '';
+    _selectedCategoryId = announcement.category?.id ?? _selectedCategoryId;
+    _deadlineDate =
+        DateTime.tryParse(announcement.deadline) ??
+        DateTime.now().add(const Duration(days: 7));
+    _deliveryDate = announcement.deliveryDate == null
+        ? null
+        : DateTime.tryParse(announcement.deliveryDate!);
+    _influencerTierId = announcement.influencerTierId;
+    _thumbnailPath = announcement.thumbnail;
+    _attachmentPath = announcement.attachment;
+    _selectedPlatforms
+      ..clear()
+      ..addAll((announcement.platforms ?? const []).map((p) => p.id));
+    _deliverables
+      ..clear()
+      ..addAll(
+        (announcement.deliverables ?? const []).map(
+          (deliverable) => {
+            'id': deliverable.id,
+            'quantity': deliverable.quantity,
+          },
+        ),
+      );
   }
 
   Future<void> _pickImage() async {
@@ -125,6 +175,13 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
     setState(() {
       if (_selectedPlatforms.contains(id)) {
         _selectedPlatforms.remove(id);
+        final deliverableIds = _deliverableTypes
+            .where((type) => type.platformId == id)
+            .map((type) => type.id)
+            .toSet();
+        _deliverables.removeWhere(
+          (deliverable) => deliverableIds.contains(deliverable['id']),
+        );
       } else {
         _selectedPlatforms.add(id);
       }
@@ -194,7 +251,8 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
     setState(() => _isSubmitting = true);
     try {
       final dateFormat = DateFormat('yyyy-MM-dd');
-      await ApiService().createAnnouncement(
+      final api = ApiService();
+      final commonArgs = (
         categoryId: _selectedCategoryId,
         title: _titleController.text.trim(),
         description: _descController.text.trim(),
@@ -205,6 +263,9 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
             ? dateFormat.format(_deliveryDate!)
             : null,
         duration: int.tryParse(_durationController.text),
+        targetAudience: _targetAudienceController.text.trim().isEmpty
+            ? null
+            : _targetAudienceController.text.trim(),
         requirements: _requirementsController.text.trim().isEmpty
             ? null
             : _requirementsController.text.trim(),
@@ -216,10 +277,55 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
         deliverables: _deliverables.isNotEmpty ? _deliverables : null,
       );
 
+      if (_isEditing) {
+        await api.updateAnnouncement(
+          widget.announcementId!,
+          categoryId: commonArgs.categoryId,
+          title: commonArgs.title,
+          description: commonArgs.description,
+          budgetMin: commonArgs.budgetMin,
+          budgetMax: commonArgs.budgetMax,
+          deadline: commonArgs.deadline,
+          deliveryDate: commonArgs.deliveryDate,
+          duration: commonArgs.duration,
+          targetAudience: commonArgs.targetAudience,
+          requirements: commonArgs.requirements,
+          minFollowers: commonArgs.minFollowers,
+          influencerTierId: commonArgs.influencerTierId,
+          thumbnailPath: commonArgs.thumbnailPath,
+          attachmentPath: commonArgs.attachmentPath,
+          platforms: commonArgs.platforms,
+          deliverables: commonArgs.deliverables,
+        );
+      } else {
+        await api.createAnnouncement(
+          categoryId: commonArgs.categoryId,
+          title: commonArgs.title,
+          description: commonArgs.description,
+          budgetMin: commonArgs.budgetMin,
+          budgetMax: commonArgs.budgetMax,
+          deadline: commonArgs.deadline,
+          deliveryDate: commonArgs.deliveryDate,
+          duration: commonArgs.duration,
+          targetAudience: commonArgs.targetAudience,
+          requirements: commonArgs.requirements,
+          minFollowers: commonArgs.minFollowers,
+          influencerTierId: commonArgs.influencerTierId,
+          thumbnailPath: commonArgs.thumbnailPath,
+          attachmentPath: commonArgs.attachmentPath,
+          platforms: commonArgs.platforms,
+          deliverables: commonArgs.deliverables,
+        );
+      }
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Annonce publiée avec succès !'),
+        SnackBar(
+          content: Text(
+            _isEditing
+                ? 'Annonce modifiée avec succès !'
+                : 'Annonce publiée avec succès !',
+          ),
           backgroundColor: AppColors.success,
         ),
       );
@@ -270,7 +376,7 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
         backgroundColor: AppColors.background,
         surfaceTintColor: Colors.transparent,
         title: Text(
-          'Créer une annonce',
+          _isEditing ? "Modifier l'annonce" : 'Créer une annonce',
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -320,7 +426,9 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
                       ],
                       Expanded(
                         child: _buildButton(
-                          _step == 3 ? 'Publier' : 'Suivant',
+                          _step == 3
+                              ? (_isEditing ? 'Enregistrer' : 'Publier')
+                              : 'Suivant',
                           onPressed: _step == 3 ? _handleSubmit : _nextStep,
                           isLoading: _isSubmitting,
                         ),
@@ -424,7 +532,7 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
             ),
             clipBehavior: Clip.hardEdge,
             child: _thumbnailPath != null
-                ? Image.file(File(_thumbnailPath!), fit: BoxFit.cover)
+                ? _buildThumbnailPreview()
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -547,6 +655,13 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
           'Ex: 1000',
           _minFollowersController,
           type: TextInputType.number,
+        ),
+        const SizedBox(height: 20),
+        _buildTextField(
+          'Audience cible',
+          'Ex: Femmes 18-35, Alger, lifestyle...',
+          _targetAudienceController,
+          maxLines: 2,
         ),
         const SizedBox(height: 20),
         Text(
@@ -803,6 +918,26 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildThumbnailPreview() {
+    final path = _thumbnailPath!;
+    if (path.startsWith('http')) {
+      return Image.network(
+        path,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        errorBuilder: (context, error, stackTrace) => const Center(
+          child: Icon(
+            Icons.broken_image,
+            color: AppColors.textTertiary,
+            size: 36,
+          ),
+        ),
+      );
+    }
+
+    return Image.file(File(path), fit: BoxFit.cover, width: double.infinity);
   }
 
   Widget _buildDatePicker(

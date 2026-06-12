@@ -363,6 +363,7 @@ class Announcement {
   final List<PlatformModel>? platforms;
   final List<DeliverableWithPivot>? deliverables;
   final InfluencerTier? influencerTier;
+  final User? user;
   final int? applicationsCount;
   final int? applicationsPendingCount;
   final int? applicationsAcceptedCount;
@@ -389,6 +390,7 @@ class Announcement {
     this.platforms,
     this.deliverables,
     this.influencerTier,
+    this.user,
     this.applicationsCount,
     this.applicationsPendingCount,
     this.applicationsAcceptedCount,
@@ -431,6 +433,7 @@ class Announcement {
       influencerTier: json['influencer_tier'] != null
           ? InfluencerTier.fromJson(json['influencer_tier'])
           : null,
+      user: json['user'] != null ? User.fromJson(json['user']) : null,
       applicationsCount: json['applications_count'] != null
           ? int.tryParse(json['applications_count'].toString())
           : null,
@@ -463,6 +466,7 @@ class Announcement {
     'min_followers': minFollowers,
     'status': status,
     'created_at': createdAt,
+    'user': user?.toJson(),
   };
 }
 
@@ -508,6 +512,7 @@ class Application {
   final String updatedAt;
   final User? user;
   final Announcement? announcement;
+  final Collaboration? collaboration;
 
   Application({
     required this.id,
@@ -520,6 +525,7 @@ class Application {
     required this.updatedAt,
     this.user,
     this.announcement,
+    this.collaboration,
   });
 
   factory Application.fromJson(Map<String, dynamic> json) => Application(
@@ -534,6 +540,9 @@ class Application {
     user: json['user'] != null ? User.fromJson(json['user']) : null,
     announcement: json['announcement'] != null
         ? Announcement.fromJson(json['announcement'])
+        : null,
+    collaboration: json['collaboration'] != null
+        ? Collaboration.fromJson(json['collaboration'])
         : null,
   );
 

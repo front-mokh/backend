@@ -86,6 +86,30 @@ class ApplicationController extends Controller
         }
     }
 
+    public function show(Request $request, Application $application)
+    {
+        $user = $request->user();
+
+        if (
+            $application->user_id !== $user->id &&
+            $application->announcement->user_id !== $user->id
+        ) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        return $application->load([
+            'user.creatorProfile',
+            'user.socialLinks',
+            'user.categories',
+            'announcement.category',
+            'announcement.platforms',
+            'announcement.deliverables',
+            'announcement.influencerTier',
+            'announcement.user.brandProfile',
+            'collaboration',
+        ]);
+    }
+
 
     public function accept(Request $request, Application $application)
     {

@@ -417,8 +417,6 @@ class ApiService {
       for (int i = 0; i < platforms.length; i++) {
         formData.fields.add(MapEntry('platforms[$i]', platforms[i].toString()));
       }
-    } else {
-      formData.fields.add(const MapEntry('platforms[]', ''));
     }
 
     if (deliverables != null && deliverables.isNotEmpty) {
@@ -433,8 +431,6 @@ class ApiService {
           ),
         );
       }
-    } else {
-      formData.fields.add(const MapEntry('deliverables[]', ''));
     }
 
     final response = await _dio.post('/announcements/$id', data: formData);
@@ -469,6 +465,11 @@ class ApiService {
     return Application.fromJson(response.data);
   }
 
+  Future<Application> getApplication(int id) async {
+    final response = await _dio.get('/applications/$id');
+    return Application.fromJson(response.data);
+  }
+
   Future<Application> acceptApplication(int id) async {
     final response = await _dio.post('/applications/$id/accept');
     return Application.fromJson(response.data);
@@ -494,6 +495,20 @@ class ApiService {
   Future<List<Application>> getMyApplications() async {
     final response = await _dio.get('/applications');
     return (response.data as List).map((e) => Application.fromJson(e)).toList();
+  }
+
+  Future<List<User>> getCreators({String? search, int? categoryId}) async {
+    final params = <String, dynamic>{};
+    final trimmedSearch = search?.trim();
+    if (trimmedSearch != null && trimmedSearch.isNotEmpty) {
+      params['search'] = trimmedSearch;
+    }
+    if (categoryId != null) {
+      params['category_id'] = categoryId.toString();
+    }
+
+    final response = await _dio.get('/creators', queryParameters: params);
+    return (response.data as List).map((e) => User.fromJson(e)).toList();
   }
 
   // ─── Collaborations ───────────────────────────────────────

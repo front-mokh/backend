@@ -61,8 +61,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Applications
     Route::post('/announcements/{announcement}/apply', [ApplicationController::class, 'store']);
     Route::get('/applications', [ApplicationController::class, 'index']); // Brand views applications for their announcements
+    Route::get('/applications/{application}', [ApplicationController::class, 'show']);
     Route::post('/applications/{application}/accept', [ApplicationController::class, 'accept']);
     Route::post('/applications/{application}/reject', [ApplicationController::class, 'reject']);
+
+    // Creator discovery
+    Route::get('/creators', [UserController::class, 'creators']);
 
     // Collaborations
     Route::get('/collaborations', [CollaborationController::class, 'index']);

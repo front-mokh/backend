@@ -12,6 +12,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - Creator/brand onboarding retries now update existing profiles instead of crashing with duplicate-profile errors.
 - Brand announcement creation now refreshes the announcement list immediately after a successful publish.
 - Brand and creator profile tabs now refresh profile data on open and no longer render a duplicate inner "Profil" app bar.
+- Priority 1 Flutter parity now covers creator discovery, announcement editing, application details, collaboration summary/status tabs, and search/filter headers on the main list screens.
 - Backend and Flutter quality checks are green.
 - React Native app in `react_native_app/mobile` remains the feature reference for parity.
 - `flutter_app/` is currently untracked in git, so remember to include it intentionally when committing.
@@ -48,36 +49,41 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - [x] Removed duplicate profile headers from brand and creator profile tabs.
 - [x] Added profile refresh-on-open and pull-to-refresh so phone/location/profile changes are not stuck on stale cached data.
 - [x] Audited Flutter screens for placeholder or incomplete implementation.
+- [x] Added backend `GET /api/creators` for brand-side creator discovery.
+- [x] Added backend `GET /api/applications/{application}` with owner/brand authorization.
+- [x] Added backend feature tests for creator discovery and application details access.
+- [x] Implemented Flutter Brand Creators discovery with search, category filters, creator cards, and detail sheet.
+- [x] Replaced Brand Edit Announcement placeholder with the shared create/edit announcement form.
+- [x] Replaced Creator Application Details placeholder with a real status/detail/navigation screen.
+- [x] Fixed Brand Application Details to load a single application by id and support accept/reject/open collaboration.
+- [x] Added search/filter/count headers to brand announcements, creator announcements, creator applications, and both collaboration inboxes.
+- [x] Added collaboration details tabs for brand and creator.
+- [x] Added visible brand action to complete a collaboration and locked UI states for completed/cancelled collaborations.
 
 ## Missing Or Stubbed Flutter Screens
 
-- [ ] Brand creator discovery (`/brand/creators`): currently only shows "Bientôt disponible".
-- [ ] Brand edit announcement (`/brand/edit-announcement/:id`): currently only shows the announcement id.
-- [ ] Creator application details (`/creator/application/:id`): currently only shows the application id.
+- [x] Brand creator discovery (`/brand/creators`) is implemented.
+- [x] Brand edit announcement (`/brand/edit-announcement/:id`) is implemented.
+- [x] Creator application details (`/creator/application/:id`) is implemented.
 
 ## Implemented But Still Behind React Native
 
-- [ ] Creator announcement discovery needs search and filters for category, budget, tier, and deadline.
-- [ ] Brand announcement management needs search, filters, sorting, and clearer application counts.
-- [ ] Brand and creator collaboration lists need stronger search/filter/status polish.
-- [ ] Collaboration detail screens need fuller summary/status tabs and completed/cancelled action locking.
+- [ ] Creator announcement discovery has search/category filters; budget, tier, and deadline filters still need advanced controls.
+- [ ] Brand announcement management has search/status filters and application counts; explicit sort controls are still pending.
+- [ ] Brand-side application filtering by status inside announcement details can be improved further.
 
 ## Verified
 
-- [x] `php artisan test` passes: 27 tests, 87 assertions.
+- [x] `php artisan test` passes: 31 tests, 100 assertions.
 - [x] `flutter analyze` passes with no issues.
 - [x] `flutter test` passes.
 
 ## Next Session: Start Here
 
-1. Implement the missing Brand Creators discovery page.
-2. Implement Brand Edit Announcement using the existing create form/backend update flow.
-3. Implement Creator Application Details.
-4. Add collaboration details/summary tabs for both roles.
-5. Add visible brand action to complete a collaboration using `ApiService.completeCollaboration`.
-6. Add completed/cancelled UI states so users understand when actions are locked.
-7. Add creator announcement search and filters for category, budget, tier, and deadline.
-8. Add stronger brand announcement list search/filter/sort and surface application counts.
+1. Add advanced creator announcement filters for budget, tier, and deadline.
+2. Add explicit brand announcement sort controls.
+3. Add brand-side status filtering inside announcement application lists.
+4. Manually test Priority 1 flows on Android against the VPS: creator discovery, edit announcement, application accept/reject, open collaboration, complete collaboration.
 
 ## Known Risks / Watch Items
 
@@ -85,6 +91,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - Flutter push notifications still need a proper Firebase Cloud Messaging strategy; backend push flow appears Expo-oriented.
 - Notification route mapping covers the known routes from this pass, but every backend notification type still needs a full audit.
 - Backend feature tests should still be added for announcement creation permissions and collaboration completion permissions.
+- New `/api/creators` endpoint is intentionally brand-only and returns the first 100 onboarded creators; pagination can be added when creator volume grows.
 
 ## Worktree Notes
 

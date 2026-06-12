@@ -262,9 +262,12 @@ class _BrandAnnouncementDetailsScreenState
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => context.push(
-                            '/brand/edit-announcement/${widget.id}',
-                          ),
+                          onPressed: () async {
+                            final updated = await context.push(
+                              '/brand/edit-announcement/${widget.id}',
+                            );
+                            if (updated == true) _load();
+                          },
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: AppColors.border),
                             shape: RoundedRectangleBorder(
@@ -659,7 +662,10 @@ class _BrandAnnouncementDetailsScreenState
       itemBuilder: (context, index) {
         final app = _applications![index];
         return GestureDetector(
-          onTap: () => context.push('/brand/application-details/${app.id}'),
+          onTap: () async {
+            await context.push('/brand/application/${app.id}');
+            if (mounted) _load();
+          },
           child: Container(
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(16),

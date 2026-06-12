@@ -20,6 +20,7 @@ class BrandCollaborationsScreen extends StatefulWidget {
 }
 
 class _BrandCollaborationsScreenState extends State<BrandCollaborationsScreen> {
+  final _searchController = TextEditingController();
   List<Collaboration> _collaborations = [];
   bool _isLoading = true;
   String _selectedFilter = 'all';
@@ -41,15 +42,14 @@ class _BrandCollaborationsScreenState extends State<BrandCollaborationsScreen> {
     WebSocketService().unsubscribeFromCollaborationUpdates(
       _subscribedCollaborationIds,
     );
+    _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _loadCollaborations({bool showLoading = true}) async {
     if (showLoading && mounted) setState(() => _isLoading = true);
     try {
-      final data = await ApiService().getCollaborations(
-        status: _selectedFilter == 'all' ? null : _selectedFilter,
-      );
+      final data = await ApiService().getCollaborations();
       if (mounted) {
         setState(() {
           _collaborations = data;
@@ -60,6 +60,35 @@ class _BrandCollaborationsScreenState extends State<BrandCollaborationsScreen> {
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  List<Collaboration> get _filteredCollaborations {
+    final query = _searchController.text.trim().toLowerCase();
+    return _collaborations.where((collaboration) {
+      final profile = collaboration.creator?.creatorProfile;
+      final creatorName = profile?.fullName.toLowerCase() ?? '';
+      final title = collaboration.announcement?.title.toLowerCase() ?? '';
+      final matchesStatus =
+          _selectedFilter == 'all' || collaboration.status == _selectedFilter;
+      final matchesSearch =
+          query.isEmpty || creatorName.contains(query) || title.contains(query);
+      return matchesStatus && matchesSearch;
+    }).toList();
+  }
+
+  Map<String, int> get _statusCounts {
+    final counts = {
+      'all': _collaborations.length,
+      'in_progress': 0,
+      'completed': 0,
+      'cancelled': 0,
+    };
+    for (final collaboration in _collaborations) {
+      if (counts.containsKey(collaboration.status)) {
+        counts[collaboration.status] = counts[collaboration.status]! + 1;
+      }
+    }
+    return counts;
   }
 
   Future<void> _syncRealtimeSubscriptions() async {
@@ -105,19 +134,7 @@ class _BrandCollaborationsScreenState extends State<BrandCollaborationsScreen> {
       backgroundColor: AppColors.background,
       body: Column(
         children: [
-          // Filter chips
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                _filterChip('Tous', 'all'),
-                _filterChip('Actif', 'active'),
-                _filterChip('En cours', 'in_progress'),
-                _filterChip('Terminé', 'completed'),
-              ],
-            ),
-          ),
+          _buildHeader(),
           Expanded(
             child: _isLoading
                 ? const Center(
@@ -153,16 +170,87 @@ class _BrandCollaborationsScreenState extends State<BrandCollaborationsScreen> {
                       ],
                     ),
                   )
+                : _filteredCollaborations.isEmpty
+                ? Center(
+                    child: Text(
+                      'Aucune collaboration ne correspond aux filtres',
+                      style: GoogleFonts.inter(color: AppColors.textSecondary),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
                 : RefreshIndicator(
                     color: AppColors.primary,
                     onRefresh: _loadCollaborations,
                     child: ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _collaborations.length,
+                      itemCount: _filteredCollaborations.length,
                       itemBuilder: (context, i) =>
-                          _buildCollabCard(_collaborations[i]),
+                          _buildCollabCard(_filteredCollaborations[i]),
                     ),
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      color: AppColors.surface,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            onChanged: (_) => setState(() {}),
+            style: GoogleFonts.inter(fontSize: 14, color: AppColors.text),
+            decoration: InputDecoration(
+              hintText: 'Rechercher une collaboration',
+              hintStyle: GoogleFonts.inter(color: AppColors.placeholder),
+              prefixIcon: const Icon(
+                Icons.search,
+                color: AppColors.textTertiary,
+              ),
+              suffixIcon: _searchController.text.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(
+                        Icons.close,
+                        color: AppColors.textSecondary,
+                      ),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {});
+                      },
+                    ),
+              filled: true,
+              fillColor: AppColors.background,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 40,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _filterChip('Tous', 'all'),
+                _filterChip('En cours', 'in_progress'),
+                _filterChip('Terminés', 'completed'),
+                _filterChip('Annulés', 'cancelled'),
+              ],
+            ),
           ),
         ],
       ),
@@ -174,20 +262,19 @@ class _BrandCollaborationsScreenState extends State<BrandCollaborationsScreen> {
     return GestureDetector(
       onTap: () {
         setState(() => _selectedFilter = value);
-        _loadCollaborations();
       },
       child: Container(
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : AppColors.surface,
+          color: isSelected ? AppColors.primary : AppColors.background,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.border,
           ),
         ),
         child: Text(
-          label,
+          '$label ${_statusCounts[value] ?? 0}',
           style: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w500,
@@ -206,7 +293,7 @@ class _BrandCollaborationsScreenState extends State<BrandCollaborationsScreen> {
         return 'En cours';
       case 'completed':
         return 'Terminé';
-      case 'canceled':
+      case 'cancelled':
         return 'Annulé';
       default:
         return status;
@@ -221,7 +308,7 @@ class _BrandCollaborationsScreenState extends State<BrandCollaborationsScreen> {
         return Colors.orange;
       case 'completed':
         return AppColors.success;
-      case 'canceled':
+      case 'cancelled':
         return AppColors.error;
       default:
         return AppColors.textSecondary;

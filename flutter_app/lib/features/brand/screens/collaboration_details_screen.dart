@@ -23,6 +23,7 @@ class BrandCollaborationDetailsScreen extends StatefulWidget {
 class _State extends State<BrandCollaborationDetailsScreen> {
   Collaboration? _collaboration;
   bool _isLoading = true;
+  bool _isCompleting = false;
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   Timer? _heartbeatTimer;
@@ -105,6 +106,101 @@ class _State extends State<BrandCollaborationDetailsScreen> {
     }
   }
 
+  bool get _isCollaborationLocked {
+    final status = _collaboration?.status;
+    return status == 'completed' || status == 'cancelled';
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'completed':
+        return 'Terminée';
+      case 'cancelled':
+        return 'Annulée';
+      case 'active':
+      case 'in_progress':
+        return 'En cours';
+      default:
+        return status;
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'completed':
+        return AppColors.success;
+      case 'cancelled':
+        return AppColors.error;
+      case 'active':
+      case 'in_progress':
+        return AppColors.warning;
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
+  Future<void> _completeCollaboration() async {
+    final collaboration = _collaboration;
+    if (collaboration == null || _isCollaborationLocked) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Terminer la collaboration',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Cette action marquera la collaboration comme terminée.',
+          style: GoogleFonts.inter(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Annuler',
+              style: GoogleFonts.inter(color: AppColors.textSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Terminer',
+              style: GoogleFonts.inter(color: AppColors.success),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isCompleting = true);
+    try {
+      final updated = await ApiService().completeCollaboration(
+        collaboration.id,
+      );
+      if (!mounted) return;
+      setState(() => _collaboration = updated);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Collaboration terminée'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur: ${e.toString()}'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isCompleting = false);
+    }
+  }
+
   Future<void> _markAsRead() async {
     try {
       final payload = await ApiService().markCollabAsRead(widget.id);
@@ -174,6 +270,15 @@ class _State extends State<BrandCollaborationDetailsScreen> {
   }
 
   Future<void> _sendMessage() async {
+    if (_isCollaborationLocked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cette collaboration est terminée'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
     _messageController.clear();
@@ -195,6 +300,15 @@ class _State extends State<BrandCollaborationDetailsScreen> {
   }
 
   Future<void> _sendAttachment() async {
+    if (_isCollaborationLocked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cette collaboration est terminée'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: [
@@ -314,7 +428,7 @@ class _State extends State<BrandCollaborationDetailsScreen> {
               child: CircularProgressIndicator(color: AppColors.primary),
             )
           : DefaultTabController(
-              length: 2,
+              length: 3,
               child: Column(
                 children: [
                   Container(
@@ -324,6 +438,7 @@ class _State extends State<BrandCollaborationDetailsScreen> {
                       unselectedLabelColor: AppColors.textSecondary,
                       indicatorColor: AppColors.primary,
                       tabs: const [
+                        Tab(text: 'Détails'),
                         Tab(text: 'Messages'),
                         Tab(text: 'Livrables'),
                       ],
@@ -331,12 +446,119 @@ class _State extends State<BrandCollaborationDetailsScreen> {
                   ),
                   Expanded(
                     child: TabBarView(
-                      children: [_buildMessagesTab(), _buildDeliverablesTab()],
+                      children: [
+                        _buildDetailsTab(),
+                        _buildMessagesTab(),
+                        _buildDeliverablesTab(),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildDetailsTab() {
+    final collaboration = _collaboration;
+    final announcement = collaboration?.announcement;
+    final creator = collaboration?.creator?.creatorProfile;
+    if (collaboration == null) return const SizedBox.shrink();
+
+    final statusColor = _statusColor(collaboration.status);
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _load,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: statusColor.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: statusColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _statusLabel(collaboration.status),
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: statusColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _detailCard(
+            Icons.campaign_outlined,
+            'Campagne',
+            announcement?.title ?? 'Annonce #${collaboration.announcementId}',
+          ),
+          _detailCard(
+            Icons.person_outline,
+            'Créateur',
+            creator?.fullName ?? 'Créateur',
+          ),
+          _detailCard(
+            Icons.attach_money,
+            'Budget proposé',
+            '${collaboration.application?.proposedBudget.toInt() ?? 0} DA',
+          ),
+          if (announcement?.deadline != null)
+            _detailCard(
+              Icons.calendar_today_outlined,
+              'Deadline candidature',
+              announcement!.deadline,
+            ),
+          if (collaboration.completedAt != null)
+            _detailCard(
+              Icons.check_circle_outline,
+              'Date de fin',
+              collaboration.completedAt!,
+            ),
+          const SizedBox(height: 16),
+          if (!_isCollaborationLocked)
+            SizedBox(
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: _isCompleting ? null : _completeCollaboration,
+                icon: _isCompleting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.check_circle_outline,
+                        color: Colors.white,
+                      ),
+                label: Text(
+                  'Terminer la collaboration',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -460,49 +682,73 @@ class _State extends State<BrandCollaborationDetailsScreen> {
                   },
                 ),
         ),
-        Container(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 8,
-            top: 8,
-            bottom: MediaQuery.of(context).padding.bottom + 8,
+        _isCollaborationLocked ? _lockedFooter() : _messageComposer(),
+      ],
+    );
+  }
+
+  Widget _messageComposer() {
+    return Container(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 8,
+        top: 8,
+        bottom: MediaQuery.of(context).padding.bottom + 8,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.border, width: 0.5)),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.attach_file, color: AppColors.textSecondary),
+            onPressed: _sendAttachment,
           ),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            border: Border(
-              top: BorderSide(color: AppColors.border, width: 0.5),
+          Expanded(
+            child: TextField(
+              controller: _messageController,
+              style: GoogleFonts.inter(fontSize: 14, color: AppColors.text),
+              decoration: InputDecoration(
+                hintText: 'Écrire un message...',
+                hintStyle: GoogleFonts.inter(color: AppColors.placeholder),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              onSubmitted: (_) => _sendMessage(),
             ),
           ),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.attach_file,
-                  color: AppColors.textSecondary,
-                ),
-                onPressed: _sendAttachment,
-              ),
-              Expanded(
-                child: TextField(
-                  controller: _messageController,
-                  style: GoogleFonts.inter(fontSize: 14, color: AppColors.text),
-                  decoration: InputDecoration(
-                    hintText: 'Écrire un message...',
-                    hintStyle: GoogleFonts.inter(color: AppColors.placeholder),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                  ),
-                  onSubmitted: (_) => _sendMessage(),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.send_rounded, color: AppColors.primary),
-                onPressed: _sendMessage,
-              ),
-            ],
+          IconButton(
+            icon: const Icon(Icons.send_rounded, color: AppColors.primary),
+            onPressed: _sendMessage,
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _lockedFooter() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 12,
+        bottom: MediaQuery.of(context).padding.bottom + 12,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.border, width: 0.5)),
+      ),
+      child: Text(
+        'Actions verrouillées',
+        textAlign: TextAlign.center,
+        style: GoogleFonts.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textSecondary,
         ),
-      ],
+      ),
     );
   }
 
@@ -612,7 +858,8 @@ class _State extends State<BrandCollaborationDetailsScreen> {
                   ),
                 ),
               ],
-              if (sub.status == 'submitted' || sub.status == 'pending') ...[
+              if (!_isCollaborationLocked &&
+                  (sub.status == 'submitted' || sub.status == 'pending')) ...[
                 const SizedBox(height: 16),
                 Row(
                   children: [
@@ -653,6 +900,47 @@ class _State extends State<BrandCollaborationDetailsScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _detailCard(IconData icon, String label, String value) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.text,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

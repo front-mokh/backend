@@ -14,8 +14,11 @@ class CreatorAnnouncementsScreen extends StatefulWidget {
 }
 
 class _State extends State<CreatorAnnouncementsScreen> {
+  final _searchController = TextEditingController();
   List<Announcement> _announcements = [];
+  List<Category> _categories = [];
   bool _isLoading = true;
+  int? _selectedCategoryId;
 
   @override
   void initState() {
@@ -23,18 +26,54 @@ class _State extends State<CreatorAnnouncementsScreen> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
+    if (mounted) setState(() => _isLoading = true);
     try {
-      final data = await ApiService().getOpenAnnouncements();
+      final results = await Future.wait([
+        ApiService().getOpenAnnouncements(),
+        ApiService().getCategories(),
+      ]);
       if (mounted) {
         setState(() {
-          _announcements = data;
+          _announcements = results[0] as List<Announcement>;
+          _categories = results[1] as List<Category>;
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  List<Announcement> get _filteredAnnouncements {
+    final query = _searchController.text.trim().toLowerCase();
+    return _announcements.where((announcement) {
+      final matchesCategory =
+          _selectedCategoryId == null ||
+          announcement.category?.id == _selectedCategoryId;
+      final matchesSearch =
+          query.isEmpty ||
+          announcement.title.toLowerCase().contains(query) ||
+          announcement.description.toLowerCase().contains(query) ||
+          (announcement.category?.name.toLowerCase().contains(query) ?? false);
+      return matchesCategory && matchesSearch;
+    }).toList();
+  }
+
+  Map<int?, int> get _categoryCounts {
+    final counts = <int?, int>{null: _announcements.length};
+    for (final category in _categories) {
+      counts[category.id] = _announcements
+          .where((announcement) => announcement.category?.id == category.id)
+          .length;
+    }
+    return counts;
   }
 
   @override
@@ -45,53 +84,162 @@ class _State extends State<CreatorAnnouncementsScreen> {
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.primary),
             )
-          : _announcements.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLightest,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.campaign_outlined,
-                      size: 40,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Aucune annonce disponible',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Revenez plus tard pour de nouvelles opportunités',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
+          : Column(
+              children: [
+                _buildHeader(),
+                Expanded(
+                  child: _announcements.isEmpty
+                      ? _emptyState(
+                          'Aucune annonce disponible',
+                          'Revenez plus tard pour de nouvelles opportunités',
+                        )
+                      : _filteredAnnouncements.isEmpty
+                      ? _emptyState(
+                          'Aucun résultat',
+                          'Aucune annonce ne correspond aux filtres',
+                        )
+                      : RefreshIndicator(
+                          color: AppColors.primary,
+                          onRefresh: _load,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _filteredAnnouncements.length,
+                            itemBuilder: (_, i) =>
+                                _buildCard(_filteredAnnouncements[i]),
+                          ),
+                        ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      color: AppColors.surface,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            onChanged: (_) => setState(() {}),
+            style: GoogleFonts.inter(fontSize: 14, color: AppColors.text),
+            decoration: InputDecoration(
+              hintText: 'Rechercher une annonce',
+              hintStyle: GoogleFonts.inter(color: AppColors.placeholder),
+              prefixIcon: const Icon(
+                Icons.search,
+                color: AppColors.textTertiary,
               ),
-            )
-          : RefreshIndicator(
-              color: AppColors.primary,
-              onRefresh: _load,
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _announcements.length,
-                itemBuilder: (_, i) => _buildCard(_announcements[i]),
+              suffixIcon: _searchController.text.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(
+                        Icons.close,
+                        color: AppColors.textSecondary,
+                      ),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {});
+                      },
+                    ),
+              filled: true,
+              fillColor: AppColors.background,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.primary),
               ),
             ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 40,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _categoryChip('Toutes', null),
+                ..._categories.map(
+                  (category) => _categoryChip(category.name, category.id),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _categoryChip(String label, int? categoryId) {
+    final selected = _selectedCategoryId == categoryId;
+    final count = _categoryCounts[categoryId] ?? 0;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        selected: selected,
+        showCheckmark: false,
+        label: Text('$label $count'),
+        onSelected: (_) => setState(() => _selectedCategoryId = categoryId),
+        backgroundColor: AppColors.background,
+        selectedColor: AppColors.primary,
+        side: BorderSide(
+          color: selected ? AppColors.primary : AppColors.border,
+        ),
+        labelStyle: GoogleFonts.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: selected ? Colors.white : AppColors.text,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+    );
+  }
+
+  Widget _emptyState(String title, String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppColors.primaryLightest,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.campaign_outlined,
+              size: 40,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.text,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 

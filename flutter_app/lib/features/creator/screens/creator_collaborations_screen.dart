@@ -19,6 +19,7 @@ class CreatorCollaborationsScreen extends StatefulWidget {
 }
 
 class _State extends State<CreatorCollaborationsScreen> {
+  final _searchController = TextEditingController();
   List<Collaboration> _collaborations = [];
   bool _isLoading = true;
   String _filter = 'all';
@@ -40,15 +41,14 @@ class _State extends State<CreatorCollaborationsScreen> {
     WebSocketService().unsubscribeFromCollaborationUpdates(
       _subscribedCollaborationIds,
     );
+    _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _load({bool showLoading = true}) async {
     if (showLoading && mounted) setState(() => _isLoading = true);
     try {
-      final data = await ApiService().getCollaborations(
-        status: _filter == 'all' ? null : _filter,
-      );
+      final data = await ApiService().getCollaborations();
       if (mounted) {
         setState(() {
           _collaborations = data;
@@ -59,6 +59,34 @@ class _State extends State<CreatorCollaborationsScreen> {
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  List<Collaboration> get _filteredCollaborations {
+    final query = _searchController.text.trim().toLowerCase();
+    return _collaborations.where((collaboration) {
+      final brandName =
+          collaboration.brand?.brandProfile?.name.toLowerCase() ?? '';
+      final title = collaboration.announcement?.title.toLowerCase() ?? '';
+      final matchesStatus = _filter == 'all' || collaboration.status == _filter;
+      final matchesSearch =
+          query.isEmpty || brandName.contains(query) || title.contains(query);
+      return matchesStatus && matchesSearch;
+    }).toList();
+  }
+
+  Map<String, int> get _statusCounts {
+    final counts = {
+      'all': _collaborations.length,
+      'in_progress': 0,
+      'completed': 0,
+      'cancelled': 0,
+    };
+    for (final collaboration in _collaborations) {
+      if (counts.containsKey(collaboration.status)) {
+        counts[collaboration.status] = counts[collaboration.status]! + 1;
+      }
+    }
+    return counts;
   }
 
   Future<void> _syncRealtimeSubscriptions() async {
@@ -104,18 +132,7 @@ class _State extends State<CreatorCollaborationsScreen> {
       backgroundColor: AppColors.background,
       body: Column(
         children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                _chip('Tous', 'all'),
-                _chip('Actif', 'active'),
-                _chip('En cours', 'in_progress'),
-                _chip('Terminé', 'completed'),
-              ],
-            ),
-          ),
+          _buildHeader(),
           Expanded(
             child: _isLoading
                 ? const Center(
@@ -151,15 +168,86 @@ class _State extends State<CreatorCollaborationsScreen> {
                       ],
                     ),
                   )
+                : _filteredCollaborations.isEmpty
+                ? Center(
+                    child: Text(
+                      'Aucune collaboration ne correspond aux filtres',
+                      style: GoogleFonts.inter(color: AppColors.textSecondary),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
                 : RefreshIndicator(
                     color: AppColors.primary,
                     onRefresh: _load,
                     child: ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _collaborations.length,
-                      itemBuilder: (_, i) => _card(_collaborations[i]),
+                      itemCount: _filteredCollaborations.length,
+                      itemBuilder: (_, i) => _card(_filteredCollaborations[i]),
                     ),
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      color: AppColors.surface,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            onChanged: (_) => setState(() {}),
+            style: GoogleFonts.inter(fontSize: 14, color: AppColors.text),
+            decoration: InputDecoration(
+              hintText: 'Rechercher une collaboration',
+              hintStyle: GoogleFonts.inter(color: AppColors.placeholder),
+              prefixIcon: const Icon(
+                Icons.search,
+                color: AppColors.textTertiary,
+              ),
+              suffixIcon: _searchController.text.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(
+                        Icons.close,
+                        color: AppColors.textSecondary,
+                      ),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {});
+                      },
+                    ),
+              filled: true,
+              fillColor: AppColors.background,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 40,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _chip('Tous', 'all'),
+                _chip('En cours', 'in_progress'),
+                _chip('Terminés', 'completed'),
+                _chip('Annulés', 'cancelled'),
+              ],
+            ),
           ),
         ],
       ),
@@ -171,18 +259,17 @@ class _State extends State<CreatorCollaborationsScreen> {
     return GestureDetector(
       onTap: () {
         setState(() => _filter = value);
-        _load();
       },
       child: Container(
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: sel ? AppColors.primary : AppColors.surface,
+          color: sel ? AppColors.primary : AppColors.background,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: sel ? AppColors.primary : AppColors.border),
         ),
         child: Text(
-          label,
+          '$label ${_statusCounts[value] ?? 0}',
           style: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w500,
@@ -201,7 +288,7 @@ class _State extends State<CreatorCollaborationsScreen> {
         return 'En cours';
       case 'completed':
         return 'Terminé';
-      case 'canceled':
+      case 'cancelled':
         return 'Annulé';
       default:
         return status;
@@ -216,7 +303,7 @@ class _State extends State<CreatorCollaborationsScreen> {
         return Colors.orange;
       case 'completed':
         return AppColors.success;
-      case 'canceled':
+      case 'cancelled':
         return AppColors.error;
       default:
         return AppColors.textSecondary;
