@@ -52,6 +52,10 @@ class AnnouncementController extends Controller
 
     public function store(Request $request)
     {
+        if (!$request->user()->isBrand()) {
+            return response()->json(['message' => 'Only brands can create announcements'], 403);
+        }
+
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
             'title' => 'required|string|max:255',

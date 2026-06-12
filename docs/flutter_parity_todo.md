@@ -1,0 +1,94 @@
+# Flutter Parity Todo
+
+## Project Components
+
+- Backend: Laravel API in `app/Http/Controllers/Api`, domain models in `app/Models`, notifications in `app/Notifications` and `app/Services`, realtime events in `app/Events`, API routes in `routes/api.php`.
+- Database: migrations, factories, and seeders in `database`; demo accounts are seeded through `database/seeders/DemoDataSeeder.php`.
+- React Native reference app: `react_native_app/mobile`; this remains the feature baseline for parity.
+- Flutter app: `flutter_app`; main product code is in `lib/core` for shared services/models/routing/theme and `lib/features` for auth, onboarding, brand, creator, and shared screens.
+- Tests: Laravel tests in `tests`; Flutter widget tests in `flutter_app/test`.
+
+## Completed In Current Pass
+
+- Added backend `POST /collaborations/{collaboration}/complete` controller handling so Flutter can complete collaborations through the existing API route.
+- Locked announcement creation to brand users on the backend.
+- Fixed Flutter model parsing for backend social links and deliverable submission relationship names.
+- Replaced Flutter realtime setup with a Reverb-compatible websocket client using Pusher protocol private-channel auth.
+- Added collaboration chat realtime handling, read tracking, heartbeat presence, and file attachments for brand and creator detail screens.
+- Fixed brand deliverable approval visibility for backend `submitted` status.
+- Added notification tap navigation from backend routes to Flutter routes and optimistic read-state updates.
+- Added unread notification badges and profile bottom tabs to both brand and creator shells.
+- Added social link display to brand and creator profiles.
+- Replaced the default Flutter counter test with an app smoke test.
+- Cleaned Flutter analyzer warnings so `flutter analyze` is green.
+- Added realtime chat read receipts with visible `Envoyé` / `Vu` states.
+- Added realtime unread badge updates in brand and creator collaboration lists.
+- Added websocket reconnect/backoff and stream-based message/read-receipt handling.
+- Added backend chat read-tracking tests.
+
+## Priority 1: Core Product Parity
+
+- Brand collaboration details:
+  - Add a dedicated details/summary tab with campaign, creator, budget, deadline, and current status.
+  - Add the visible "complete collaboration" action using `ApiService.completeCollaboration`.
+  - Confirm completed collaborations hide approval actions and show a final state.
+- Creator collaboration details:
+  - Add a matching details/summary tab with campaign, brand, deadline, deliverables, and status.
+  - Make completed/cancelled states visually clear.
+- Announcement discovery:
+  - Add creator search and filters for category, budget, tier, and deadline.
+  - Keep filter params aligned with `GET /api/announcements`.
+- Brand announcement management:
+  - Add stronger list search/filter/sort.
+  - Surface pending/accepted/rejected application counts consistently.
+  - Verify edit, close, delete, attachment, thumbnail, platforms, and deliverables match backend behavior.
+- Applications:
+  - Add richer brand-side application filtering by status.
+  - Add creator-side application status details and clearer navigation back to announcement/collaboration.
+
+## Priority 2: Notifications And Realtime
+
+- Manually test websocket reconnect/backoff and automatic private-channel resubscription on real Android/iOS devices.
+- Continue migrating notification consumers from singleton callbacks to stream listeners where useful.
+- Add "delete all notifications" if backend supports it, or add backend endpoint first.
+- Add notification deep-link coverage for every backend notification route.
+- Decide push strategy for Flutter:
+  - Replace or extend Expo push token backend flow with Firebase Cloud Messaging for Flutter.
+  - Add device token registration, refresh, logout cleanup, and push payload route mapping.
+
+## Priority 3: UX And Mobile Polish
+
+- Add loading, empty, and error states for every list screen.
+- Add pull-to-refresh on list-heavy screens.
+- Add pagination/infinite scrolling where backend responses support it.
+- Standardize status labels and colors across announcements, applications, collaborations, and submissions.
+- Improve attachment previews for PDF/video files.
+- Add image/file size validation feedback before upload.
+- Add offline/network failure messaging for API and websocket failures.
+
+## Priority 4: Backend/API Hardening
+
+- Add feature tests for:
+  - Non-brand users cannot create announcements.
+  - Brands can complete only their own collaborations.
+  - Creators cannot complete collaborations.
+  - Submission approval/rejection permissions.
+  - Notification route payloads expected by mobile.
+  - Chat send-message permissions and realtime read receipt payloads.
+- Review policies for every collaboration and submission endpoint.
+- Confirm uploaded files are exposed through stable public URLs consumed by mobile.
+- Confirm Reverb channel names and broadcast event names are documented for app clients.
+
+## Priority 5: Release Readiness
+
+- Add Flutter integration tests for login, onboarding, announcement browsing, applying, chat, deliverable submission, and notification navigation.
+- Add environment documentation for Flutter `.env`, backend API URL, Reverb host/port/key/scheme, and storage URL.
+- Add build scripts/checklist for Android and iOS.
+- Add CI steps for `php artisan test`, `flutter analyze`, and `flutter test`.
+- Review app icons, splash screen, permissions, package IDs, and signing configuration.
+
+## Current Verification
+
+- `php artisan test`: passing, 24 tests / 68 assertions.
+- `flutter analyze`: passing with no issues.
+- `flutter test`: passing.

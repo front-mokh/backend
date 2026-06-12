@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Events\MessageReadEvent;
+use App\Events\NewMessageEvent;
 use App\Models\Collaboration;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
@@ -43,21 +45,7 @@ class CollaborationController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // Update presence + mark messages as read (user opened the chat)
-        $user = $request->user();
-        $now = now();
-
-        if ($user->id === $collaboration->brand_id) {
-            $collaboration->update([
-                'brand_last_seen_at' => $now,
-                'brand_last_read_at' => $now,
-            ]);
-        } else {
-            $collaboration->update([
-                'creator_last_seen_at' => $now,
-                'creator_last_read_at' => $now,
-            ]);
-        }
+        $this->markReadForUser($collaboration, $request->user(), true);
 
         // Load relationships
         $collaboration->load([
@@ -68,6 +56,7 @@ class CollaborationController extends Controller
             'messages.sender',
             'submissions.deliverableType'
         ]);
+        $collaboration->unread_count = $collaboration->unreadCountFor($request->user());
 
         return response()->json($collaboration);
     }
@@ -103,16 +92,9 @@ class CollaborationController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $user = $request->user();
-        $now = now();
+        $payload = $this->markReadForUser($collaboration, $request->user(), true);
 
-        if ($user->id === $collaboration->brand_id) {
-            $collaboration->update(['brand_last_read_at' => $now]);
-        } else {
-            $collaboration->update(['creator_last_read_at' => $now]);
-        }
-
-        return response()->json(['status' => 'ok']);
+        return response()->json($payload);
     }
 
     public function updateStatus(Request $request, Collaboration $collaboration)
@@ -134,6 +116,27 @@ class CollaborationController extends Controller
         $collaboration->update($updateData);
 
         return response()->json($collaboration);
+    }
+
+    public function complete(Request $request, Collaboration $collaboration)
+    {
+        if ($request->user()->id !== $collaboration->brand_id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $collaboration->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+        ]);
+
+        return response()->json($collaboration->fresh([
+            'announcement',
+            'brand.brandProfile',
+            'creator.creatorProfile',
+            'application',
+            'messages.sender',
+            'submissions.deliverableType',
+        ]));
     }
 
     public function sendMessage(Request $request, Collaboration $collaboration)
@@ -158,16 +161,32 @@ class CollaborationController extends Controller
             'attachment' => $attachmentPath,
         ]);
 
-        // Broadcast to private channel (real-time delivery via WebSocket)
-        broadcast(new \App\Events\NewMessageEvent($message->load('sender')))->toOthers();
-
-        // Update sender's presence (they're actively in the chat)
+        // Update sender's presence/read state (they're actively in the chat).
         $user = $request->user();
         if ($user->id === $collaboration->brand_id) {
-            $collaboration->update(['brand_last_seen_at' => now()]);
+            $collaboration->update([
+                'brand_last_seen_at' => now(),
+                'brand_last_read_at' => now(),
+            ]);
         } else {
-            $collaboration->update(['creator_last_seen_at' => now()]);
+            $collaboration->update([
+                'creator_last_seen_at' => now(),
+                'creator_last_read_at' => now(),
+            ]);
         }
+
+        $collaboration->messages()
+            ->where('sender_id', '!=', $user->id)
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+
+        // Broadcast to private channel (real-time delivery via WebSocket).
+        broadcast(new NewMessageEvent($message->load('sender')))->toOthers();
+        broadcast(new MessageReadEvent(
+            $collaboration->fresh(),
+            $user->id,
+            now()->toJSON()
+        ))->toOthers();
 
         // Smart notification for recipient
         $recipient = $user->id === $collaboration->brand_id
@@ -196,6 +215,47 @@ class CollaborationController extends Controller
         }
 
         return response()->json($message->load('sender'), 201);
+    }
+
+    private function markReadForUser(Collaboration $collaboration, $user, bool $broadcast = false): array
+    {
+        $now = now();
+
+        if ($user->id === $collaboration->brand_id) {
+            $collaboration->update([
+                'brand_last_seen_at' => $now,
+                'brand_last_read_at' => $now,
+            ]);
+        } else {
+            $collaboration->update([
+                'creator_last_seen_at' => $now,
+                'creator_last_read_at' => $now,
+            ]);
+        }
+
+        $collaboration->messages()
+            ->where('sender_id', '!=', $user->id)
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+
+        $fresh = $collaboration->fresh();
+        $payload = [
+            'status' => 'ok',
+            'collaboration_id' => $fresh->id,
+            'reader_id' => $user->id,
+            'read_at' => $now->toJSON(),
+            'brand_last_read_at' => $fresh->brand_last_read_at?->toJSON(),
+            'creator_last_read_at' => $fresh->creator_last_read_at?->toJSON(),
+            'brand_last_seen_at' => $fresh->brand_last_seen_at?->toJSON(),
+            'creator_last_seen_at' => $fresh->creator_last_seen_at?->toJSON(),
+            'unread_count' => $fresh->unreadCountFor($user),
+        ];
+
+        if ($broadcast) {
+            broadcast(new MessageReadEvent($fresh, $user->id, $now->toJSON()))->toOthers();
+        }
+
+        return $payload;
     }
 
     public function submitDeliverable(Request $request, Collaboration $collaboration)
