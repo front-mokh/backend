@@ -25,6 +25,23 @@
 - Added realtime unread badge updates in brand and creator collaboration lists.
 - Added websocket reconnect/backoff and stream-based message/read-receipt handling.
 - Added backend chat read-tracking tests.
+- Fixed brand announcement list refresh after a successful announcement publish.
+- Removed duplicate profile app bars and refreshed brand/creator profile data when profile tabs open.
+- Added profile pull-to-refresh and explicit fallback values for missing phone/location fields.
+- Audited Flutter pages for placeholders and incomplete parity.
+
+## Missing Or Stubbed Flutter Pages
+
+- Brand creator discovery (`/brand/creators`): currently a "Bientôt disponible" placeholder.
+- Brand edit announcement (`/brand/edit-announcement/:id`): currently a placeholder that only displays the id.
+- Creator application details (`/creator/application/:id`): currently a placeholder that only displays the id.
+
+## Implemented But Incomplete Compared To React Native
+
+- Creator announcement discovery: needs search and filters for category, budget, tier, and deadline.
+- Brand announcement management: needs search, filters, sorting, and clearer application counts.
+- Brand and creator collaboration lists: need stronger search/filter/status UX.
+- Collaboration detail screens: need fuller summary/status views and completed/cancelled action locking.
 
 ## Priority 1: Core Product Parity
 
@@ -42,6 +59,10 @@
   - Add stronger list search/filter/sort.
   - Surface pending/accepted/rejected application counts consistently.
   - Verify edit, close, delete, attachment, thumbnail, platforms, and deliverables match backend behavior.
+- Missing page implementation:
+  - Build brand creator discovery/search instead of the current placeholder.
+  - Build brand edit announcement instead of the current placeholder.
+  - Build creator application details instead of the current placeholder.
 - Applications:
   - Add richer brand-side application filtering by status.
   - Add creator-side application status details and clearer navigation back to announcement/collaboration.
@@ -89,6 +110,6 @@
 
 ## Current Verification
 
-- `php artisan test`: passing, 24 tests / 68 assertions.
+- `php artisan test`: passing, 27 tests / 87 assertions.
 - `flutter analyze`: passing with no issues.
 - `flutter test`: passing.

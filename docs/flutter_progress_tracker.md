@@ -10,6 +10,8 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - Collaboration chat now supports realtime messages, realtime read receipts, visible sent/seen states, and live unread badges in collaboration lists.
 - Onboarding now keeps draft state live while users type and gives incomplete-profile users a clear logout path.
 - Creator/brand onboarding retries now update existing profiles instead of crashing with duplicate-profile errors.
+- Brand announcement creation now refreshes the announcement list immediately after a successful publish.
+- Brand and creator profile tabs now refresh profile data on open and no longer render a duplicate inner "Profil" app bar.
 - Backend and Flutter quality checks are green.
 - React Native app in `react_native_app/mobile` remains the feature reference for parity.
 - `flutter_app/` is currently untracked in git, so remember to include it intentionally when committing.
@@ -42,6 +44,23 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - [x] Added backend chat read-tracking feature tests.
 - [x] Improved Flutter onboarding state management with live draft updates, persisted step selections, and an exit/logout action.
 - [x] Fixed backend onboarding double-submit crashes and Flutter onboarding error messages for failed submits.
+- [x] Fixed brand announcement list refresh after creating a new announcement.
+- [x] Removed duplicate profile headers from brand and creator profile tabs.
+- [x] Added profile refresh-on-open and pull-to-refresh so phone/location/profile changes are not stuck on stale cached data.
+- [x] Audited Flutter screens for placeholder or incomplete implementation.
+
+## Missing Or Stubbed Flutter Screens
+
+- [ ] Brand creator discovery (`/brand/creators`): currently only shows "Bientôt disponible".
+- [ ] Brand edit announcement (`/brand/edit-announcement/:id`): currently only shows the announcement id.
+- [ ] Creator application details (`/creator/application/:id`): currently only shows the application id.
+
+## Implemented But Still Behind React Native
+
+- [ ] Creator announcement discovery needs search and filters for category, budget, tier, and deadline.
+- [ ] Brand announcement management needs search, filters, sorting, and clearer application counts.
+- [ ] Brand and creator collaboration lists need stronger search/filter/status polish.
+- [ ] Collaboration detail screens need fuller summary/status tabs and completed/cancelled action locking.
 
 ## Verified
 
@@ -51,11 +70,14 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 
 ## Next Session: Start Here
 
-1. Add collaboration details/summary tabs for both roles.
-2. Add visible brand action to complete a collaboration using `ApiService.completeCollaboration`.
-3. Add completed/cancelled UI states so users understand when actions are locked.
-4. Add creator announcement search and filters for category, budget, tier, and deadline.
-5. Add stronger brand announcement list search/filter/sort and surface application counts.
+1. Implement the missing Brand Creators discovery page.
+2. Implement Brand Edit Announcement using the existing create form/backend update flow.
+3. Implement Creator Application Details.
+4. Add collaboration details/summary tabs for both roles.
+5. Add visible brand action to complete a collaboration using `ApiService.completeCollaboration`.
+6. Add completed/cancelled UI states so users understand when actions are locked.
+7. Add creator announcement search and filters for category, budget, tier, and deadline.
+8. Add stronger brand announcement list search/filter/sort and surface application counts.
 
 ## Known Risks / Watch Items
 

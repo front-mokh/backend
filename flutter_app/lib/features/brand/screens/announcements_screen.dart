@@ -73,7 +73,12 @@ class _BrandAnnouncementsScreenState extends State<BrandAnnouncementsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/brand/create-announcement'),
+        onPressed: () async {
+          final created = await context.push('/brand/create-announcement');
+          if (created == true) {
+            await _loadAnnouncements();
+          }
+        },
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
@@ -144,7 +149,10 @@ class _BrandAnnouncementsScreenState extends State<BrandAnnouncementsScreen> {
 
   Widget _buildAnnouncementCard(Announcement announcement) {
     return GestureDetector(
-      onTap: () => context.push('/brand/announcement/${announcement.id}'),
+      onTap: () async {
+        await context.push('/brand/announcement/${announcement.id}');
+        if (mounted) await _loadAnnouncements();
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),

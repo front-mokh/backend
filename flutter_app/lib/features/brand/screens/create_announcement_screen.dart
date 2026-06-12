@@ -223,7 +223,7 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
           backgroundColor: AppColors.success,
         ),
       );
-      context.pop();
+      context.pop(true);
     } catch (e) {
       if (mounted) {
         String msg = e.toString().replaceAll('Exception: ', '');

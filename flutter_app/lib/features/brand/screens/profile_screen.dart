@@ -8,8 +8,24 @@ import '../../../core/utils/social_utils.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class BrandProfileScreen extends StatelessWidget {
+class BrandProfileScreen extends StatefulWidget {
   const BrandProfileScreen({super.key});
+
+  @override
+  State<BrandProfileScreen> createState() => _BrandProfileScreenState();
+}
+
+class _BrandProfileScreenState extends State<BrandProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    final authProvider = context.read<AuthProvider>();
+    Future.microtask(authProvider.refreshUser);
+  }
+
+  Future<void> _refreshProfile() {
+    return context.read<AuthProvider>().refreshUser();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,164 +37,167 @@ class BrandProfileScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        title: Text(
-          'Profil',
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.text,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            // Avatar
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: AppColors.primaryLightest,
-              backgroundImage: profile?.logo != null
-                  ? CachedNetworkImageProvider(profile!.logo!)
-                  : null,
-              child: profile?.logo == null
-                  ? Text(
-                      profile?.name.isNotEmpty == true
-                          ? profile!.name[0].toUpperCase()
-                          : 'B',
-                      style: GoogleFonts.inter(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
-                    )
-                  : null,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              profile?.name ?? 'Marque',
-              style: GoogleFonts.inter(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: AppColors.text,
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: _refreshProfile,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              // Avatar
+              CircleAvatar(
+                radius: 50,
+                backgroundColor: AppColors.primaryLightest,
+                backgroundImage: profile?.logo != null
+                    ? CachedNetworkImageProvider(profile!.logo!)
+                    : null,
+                child: profile?.logo == null
+                    ? Text(
+                        profile?.name.isNotEmpty == true
+                            ? profile!.name[0].toUpperCase()
+                            : 'B',
+                        style: GoogleFonts.inter(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      )
+                    : null,
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              user?.email ?? '',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: AppColors.textSecondary,
+              const SizedBox(height: 16),
+              Text(
+                _valueOr(profile?.name, 'Marque'),
+                style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.text,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 4),
+              Text(
+                user?.email ?? '',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 24),
 
-            // Info cards
-            _infoCard(Icons.phone_outlined, 'Téléphone', profile?.phone ?? ''),
-            _infoCard(
-              Icons.location_on_outlined,
-              'Localisation',
-              profile?.location ?? '',
-            ),
-            if (profile?.website != null)
-              _infoCard(Icons.language, 'Site web', profile!.website!),
-            if (profile?.description != null)
+              // Info cards
               _infoCard(
-                Icons.info_outline,
-                'Description',
-                profile!.description!,
+                Icons.phone_outlined,
+                'Téléphone',
+                _valueOr(profile?.phone, 'Non renseigné'),
               ),
+              _infoCard(
+                Icons.location_on_outlined,
+                'Localisation',
+                _valueOr(profile?.location, 'Non renseigné'),
+              ),
+              if (_hasValue(profile?.website))
+                _infoCard(Icons.language, 'Site web', profile!.website!),
+              if (_hasValue(profile?.description))
+                _infoCard(
+                  Icons.info_outline,
+                  'Description',
+                  profile!.description!,
+                ),
 
-            if (socialLinks.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Liens sociaux',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.text,
+              if (socialLinks.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Liens sociaux',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.text,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              ...socialLinks.map(_socialLinkCard),
-            ],
+                const SizedBox(height: 8),
+                ...socialLinks.map(_socialLinkCard),
+              ],
 
-            // Industries
-            if (industries.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Secteurs',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.text,
+              // Industries
+              if (industries.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Secteurs',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.text,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: industries
-                    .map(
-                      (ind) => Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLightest,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          ind.name,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.primary,
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: industries
+                      .map(
+                        (ind) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLightest,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            ind.name,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
-                      ),
-                    )
-                    .toList(),
+                      )
+                      .toList(),
+                ),
+              ],
+
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: () => authProvider.logout(),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.error),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: Text(
+                    'Se déconnecter',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.error,
+                    ),
+                  ),
+                ),
               ),
             ],
-
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: OutlinedButton(
-                onPressed: () => authProvider.logout(),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.error),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: Text(
-                  'Se déconnecter',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.error,
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  bool _hasValue(String? value) => value != null && value.trim().isNotEmpty;
+
+  String _valueOr(String? value, String fallback) {
+    final trimmed = value?.trim() ?? '';
+    return trimmed.isEmpty ? fallback : trimmed;
   }
 
   Widget _infoCard(IconData icon, String label, String value) {

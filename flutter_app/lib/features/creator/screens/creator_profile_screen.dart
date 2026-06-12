@@ -8,8 +8,24 @@ import '../../../core/utils/social_utils.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class CreatorProfileScreen extends StatelessWidget {
+class CreatorProfileScreen extends StatefulWidget {
   const CreatorProfileScreen({super.key});
+
+  @override
+  State<CreatorProfileScreen> createState() => _CreatorProfileScreenState();
+}
+
+class _CreatorProfileScreenState extends State<CreatorProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    final authProvider = context.read<AuthProvider>();
+    Future.microtask(authProvider.refreshUser);
+  }
+
+  Future<void> _refreshProfile() {
+    return context.read<AuthProvider>().refreshUser();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,157 +37,160 @@ class CreatorProfileScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        title: Text(
-          'Profil',
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.text,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: AppColors.primaryLightest,
-              backgroundImage: profile?.profilePicture != null
-                  ? CachedNetworkImageProvider(profile!.profilePicture!)
-                  : null,
-              child: profile?.profilePicture == null
-                  ? Text(
-                      profile?.firstName.isNotEmpty == true
-                          ? profile!.firstName[0].toUpperCase()
-                          : 'C',
-                      style: GoogleFonts.inter(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
-                    )
-                  : null,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              profile?.fullName ?? 'Créateur',
-              style: GoogleFonts.inter(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: AppColors.text,
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: _refreshProfile,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              CircleAvatar(
+                radius: 50,
+                backgroundColor: AppColors.primaryLightest,
+                backgroundImage: profile?.profilePicture != null
+                    ? CachedNetworkImageProvider(profile!.profilePicture!)
+                    : null,
+                child: profile?.profilePicture == null
+                    ? Text(
+                        profile?.firstName.isNotEmpty == true
+                            ? profile!.firstName[0].toUpperCase()
+                            : 'C',
+                        style: GoogleFonts.inter(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      )
+                    : null,
               ),
-            ),
-            if (profile?.nickname != null)
+              const SizedBox(height: 16),
               Text(
-                '@${profile!.nickname}',
+                _valueOr(profile?.fullName, 'Créateur'),
+                style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.text,
+                ),
+              ),
+              if (_hasValue(profile?.nickname))
+                Text(
+                  '@${profile!.nickname}',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              const SizedBox(height: 4),
+              Text(
+                user?.email ?? '',
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   color: AppColors.textSecondary,
                 ),
               ),
-            const SizedBox(height: 4),
-            Text(
-              user?.email ?? '',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: AppColors.textSecondary,
+              const SizedBox(height: 24),
+              _infoCard(
+                Icons.phone_outlined,
+                'Téléphone',
+                _valueOr(profile?.phone, 'Non renseigné'),
               ),
-            ),
-            const SizedBox(height: 24),
-            _infoCard(Icons.phone_outlined, 'Téléphone', profile?.phone ?? ''),
-            if (profile?.bio != null)
-              _infoCard(Icons.info_outline, 'Bio', profile!.bio!),
+              if (_hasValue(profile?.bio))
+                _infoCard(Icons.info_outline, 'Bio', profile!.bio!),
 
-            if (socialLinks.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Liens sociaux',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.text,
+              if (socialLinks.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Liens sociaux',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.text,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              ...socialLinks.map(_socialLinkCard),
-            ],
+                const SizedBox(height: 8),
+                ...socialLinks.map(_socialLinkCard),
+              ],
 
-            if (categories.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Catégories',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.text,
+              if (categories.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Catégories',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.text,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: categories
-                    .map(
-                      (cat) => Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLightest,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          cat.name,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.primary,
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: categories
+                      .map(
+                        (cat) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLightest,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            cat.name,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
-                      ),
-                    )
-                    .toList(),
+                      )
+                      .toList(),
+                ),
+              ],
+
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: () => auth.logout(),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.error),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: Text(
+                    'Se déconnecter',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.error,
+                    ),
+                  ),
+                ),
               ),
             ],
-
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: OutlinedButton(
-                onPressed: () => auth.logout(),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.error),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: Text(
-                  'Se déconnecter',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.error,
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  bool _hasValue(String? value) => value != null && value.trim().isNotEmpty;
+
+  String _valueOr(String? value, String fallback) {
+    final trimmed = value?.trim() ?? '';
+    return trimmed.isEmpty ? fallback : trimmed;
   }
 
   Widget _infoCard(IconData icon, String label, String value) {
