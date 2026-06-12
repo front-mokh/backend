@@ -11,6 +11,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - Onboarding now keeps draft state live while users type and gives incomplete-profile users a clear logout path.
 - Creator/brand onboarding retries now update existing profiles instead of crashing with duplicate-profile errors.
 - Creator/brand onboarding completion now refreshes state safely after submit and no longer loops back to the profile info step when social links serialize booleans as `0/1`.
+- Flutter now keeps the root GoRouter stable across auth refreshes so brand/creator profile tabs do not bounce back to the default announcements page.
 - Brand announcement creation now refreshes the announcement list immediately after a successful publish.
 - Brand and creator profile tabs now refresh profile data on open and no longer render a duplicate inner "Profil" app bar.
 - Priority 1 Flutter parity now covers creator discovery, announcement editing, application details, collaboration summary/status tabs, and search/filter headers on the main list screens.
@@ -48,6 +49,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - [x] Fixed backend onboarding double-submit crashes and Flutter onboarding error messages for failed submits.
 - [x] Fixed post-onboarding refresh parsing for social links and messages with numeric boolean values.
 - [x] Added a backend cast for `SocialLink::is_verified` and deployed it to the VPS.
+- [x] Fixed root router recreation during profile refreshes, which sent brand users from Profile back to Announcements.
 - [x] Fixed brand announcement list refresh after creating a new announcement.
 - [x] Removed duplicate profile headers from brand and creator profile tabs.
 - [x] Added profile refresh-on-open and pull-to-refresh so phone/location/profile changes are not stuck on stale cached data.

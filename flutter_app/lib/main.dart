@@ -13,14 +13,28 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final AuthProvider _authProvider = AuthProvider();
+  late final _router = AppRouter.router(_authProvider);
+
+  @override
+  void dispose() {
+    _authProvider.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider<AuthProvider>.value(value: _authProvider),
         ChangeNotifierProvider(create: (_) => OnboardingProvider()),
       ],
       child: Consumer<AuthProvider>(
@@ -38,13 +52,11 @@ class MyApp extends StatelessWidget {
             );
           }
 
-          final router = AppRouter.router(authProvider);
-
           return MaterialApp.router(
             title: 'Brands & Creators',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
-            routerConfig: router,
+            routerConfig: _router,
           );
         },
       ),
