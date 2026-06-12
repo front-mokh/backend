@@ -11,7 +11,7 @@ void main() {
   setUpAll(() async {
     FlutterSecureStorage.setMockInitialValues({});
     SharedPreferences.setMockInitialValues({});
-    await dotenv.load(fileName: '.env');
+    await dotenv.load(fileName: '.env', isOptional: true);
   });
 
   testWidgets('renders login screen when unauthenticated', (tester) async {

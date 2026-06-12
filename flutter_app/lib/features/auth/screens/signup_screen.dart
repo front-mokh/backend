@@ -83,7 +83,7 @@ class _SignupScreenState extends State<SignupScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.error?.toString() ?? 'Erreur réseau'),
+          content: Text(ApiService.errorMessage(e)),
           backgroundColor: AppColors.error,
         ),
       );

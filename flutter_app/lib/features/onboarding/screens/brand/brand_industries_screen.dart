@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,7 @@ import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/providers/onboarding_provider.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../widgets/onboarding_exit_button.dart';
 
 class BrandIndustriesScreen extends StatefulWidget {
   const BrandIndustriesScreen({super.key});
@@ -76,6 +78,14 @@ class _BrandIndustriesScreenState extends State<BrandIndustriesScreen> {
       if (!mounted) return;
       onboarding.resetData();
       context.go('/onboarding/success');
+    } on DioException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ApiService.errorMessage(e)),
+          backgroundColor: AppColors.error,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -87,6 +97,17 @@ class _BrandIndustriesScreenState extends State<BrandIndustriesScreen> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  void _toggleIndustry(int id) {
+    setState(() {
+      if (_selected.contains(id)) {
+        _selected.remove(id);
+      } else {
+        _selected.add(id);
+      }
+    });
+    context.read<OnboardingProvider>().setIndustries(_selected);
   }
 
   @override
@@ -105,6 +126,7 @@ class _BrandIndustriesScreenState extends State<BrandIndustriesScreen> {
           ),
         ),
         centerTitle: true,
+        actions: const [OnboardingExitButton()],
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -143,13 +165,7 @@ class _BrandIndustriesScreenState extends State<BrandIndustriesScreen> {
                       children: _industries.map((ind) {
                         final isSelected = _selected.contains(ind.id);
                         return GestureDetector(
-                          onTap: () => setState(() {
-                            if (isSelected) {
-                              _selected.remove(ind.id);
-                            } else {
-                              _selected.add(ind.id);
-                            }
-                          }),
+                          onTap: () => _toggleIndustry(ind.id),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.symmetric(

@@ -8,6 +8,8 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 
 - Flutter app exists in `flutter_app/` and is now connected more closely to the Laravel backend.
 - Collaboration chat now supports realtime messages, realtime read receipts, visible sent/seen states, and live unread badges in collaboration lists.
+- Onboarding now keeps draft state live while users type and gives incomplete-profile users a clear logout path.
+- Creator/brand onboarding retries now update existing profiles instead of crashing with duplicate-profile errors.
 - Backend and Flutter quality checks are green.
 - React Native app in `react_native_app/mobile` remains the feature reference for parity.
 - `flutter_app/` is currently untracked in git, so remember to include it intentionally when committing.
@@ -38,10 +40,12 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - [x] Added visible `Envoyé` / `Vu` read receipt UI to brand and creator chat bubbles.
 - [x] Added realtime collaboration-list unread badge updates for brand and creator inboxes.
 - [x] Added backend chat read-tracking feature tests.
+- [x] Improved Flutter onboarding state management with live draft updates, persisted step selections, and an exit/logout action.
+- [x] Fixed backend onboarding double-submit crashes and Flutter onboarding error messages for failed submits.
 
 ## Verified
 
-- [x] `php artisan test` passes: 24 tests, 68 assertions.
+- [x] `php artisan test` passes: 27 tests, 87 assertions.
 - [x] `flutter analyze` passes with no issues.
 - [x] `flutter test` passes.
 

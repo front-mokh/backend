@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'dart:io';
 import '../../../../core/providers/onboarding_provider.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../widgets/onboarding_exit_button.dart';
 
 class BrandInfoScreen extends StatefulWidget {
   const BrandInfoScreen({super.key});
@@ -33,10 +34,21 @@ class _BrandInfoScreenState extends State<BrandInfoScreen> {
     _descriptionController.text = data.description;
     _websiteController.text = data.website;
     _logoPath = data.logo.isNotEmpty ? data.logo : null;
+
+    _nameController.addListener(_syncDraft);
+    _phoneController.addListener(_syncDraft);
+    _locationController.addListener(_syncDraft);
+    _descriptionController.addListener(_syncDraft);
+    _websiteController.addListener(_syncDraft);
   }
 
   @override
   void dispose() {
+    _nameController.removeListener(_syncDraft);
+    _phoneController.removeListener(_syncDraft);
+    _locationController.removeListener(_syncDraft);
+    _descriptionController.removeListener(_syncDraft);
+    _websiteController.removeListener(_syncDraft);
     _nameController.dispose();
     _phoneController.dispose();
     _locationController.dispose();
@@ -45,25 +57,44 @@ class _BrandInfoScreenState extends State<BrandInfoScreen> {
     super.dispose();
   }
 
+  void _syncDraft() {
+    context.read<OnboardingProvider>().updateBrandInfo(
+      brandName: _nameController.text,
+      phone: _phoneController.text,
+      location: _locationController.text,
+      description: _descriptionController.text,
+      website: _websiteController.text,
+      logo: _logoPath ?? '',
+    );
+
+    if (_phoneError != null && mounted) {
+      setState(() => _phoneError = null);
+    }
+  }
+
   Future<void> _pickLogo() async {
     final picker = ImagePicker();
     final image = await picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 80,
     );
-    if (image != null) setState(() => _logoPath = image.path);
+    if (image == null) return;
+    if (!mounted) return;
+    setState(() => _logoPath = image.path);
+    context.read<OnboardingProvider>().updateBrandInfo(logo: image.path);
   }
 
   void _next() {
     final onboarding = context.read<OnboardingProvider>();
-    final phoneError = onboarding.validateBrandPhoneNumber(
-      _phoneController.text,
-    );
+    final brandName = _nameController.text.trim();
+    final phone = _phoneController.text.trim();
+    final location = _locationController.text.trim();
+    final phoneError = onboarding.validateBrandPhoneNumber(phone);
     if (phoneError != null) {
       setState(() => _phoneError = phoneError);
       return;
     }
-    if (_nameController.text.isEmpty || _locationController.text.isEmpty) {
+    if (brandName.isEmpty || location.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Le nom et la localisation sont requis'),
@@ -73,12 +104,14 @@ class _BrandInfoScreenState extends State<BrandInfoScreen> {
       return;
     }
 
-    onboarding.brandName = _nameController.text;
-    onboarding.phone = _phoneController.text;
-    onboarding.location = _locationController.text;
-    onboarding.description = _descriptionController.text;
-    onboarding.website = _websiteController.text;
-    onboarding.logo = _logoPath ?? '';
+    onboarding.updateBrandInfo(
+      brandName: brandName,
+      phone: phone,
+      location: location,
+      description: _descriptionController.text.trim(),
+      website: _websiteController.text.trim(),
+      logo: _logoPath ?? '',
+    );
     onboarding.updateStep(2);
     context.push('/onboarding/brand/social');
   }
@@ -99,6 +132,7 @@ class _BrandInfoScreenState extends State<BrandInfoScreen> {
           ),
         ),
         centerTitle: true,
+        actions: const [OnboardingExitButton()],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),

@@ -6,8 +6,6 @@ use App\Enums\UserType;
 use App\Http\Controllers\Controller;
 use App\Models\BrandProfile;
 use App\Models\CreatorProfile;
-use App\Models\SocialLink;
-use App\Models\Category;
 use Illuminate\Http\Request;
 
 class OnboardingController extends Controller
@@ -65,25 +63,33 @@ class OnboardingController extends Controller
             $logoPath = $request->file('logo')->store('logos', 'public');
         }
 
-        $brandProfile = BrandProfile::create([
-            'user_id' => $user->id,
+        $brandProfile = BrandProfile::firstOrNew(['user_id' => $user->id]);
+        $isNewProfile = ! $brandProfile->exists;
+
+        $brandProfile->fill([
             'name' => $validated['name'],
             'phone' => $validated['phone'],
             'location' => $validated['location'],
             'description' => data_get($validated, 'description'),
             'website' => data_get($validated, 'website'),
-            'logo' => $logoPath,
         ]);
 
-        foreach ($validated['links'] as $linkUrl) {
+        if ($logoPath !== null) {
+            $brandProfile->logo = $logoPath;
+        }
+
+        $brandProfile->save();
+
+        $user->socialLinks()->delete();
+        foreach (array_unique($validated['links']) as $linkUrl) {
             $user->socialLinks()->create(['url' => $linkUrl]);
         }
 
-        $brandProfile->industries()->attach($validated['industries']);
+        $brandProfile->industries()->sync($validated['industries']);
 
         $user->update(['onboarding_completed_at' => now()]);
 
-        return response()->json($brandProfile, 201);
+        return response()->json($brandProfile->load('industries'), $isNewProfile ? 201 : 200);
     }
 
     public function storeCreatorProfile(Request $request)
@@ -100,11 +106,12 @@ class OnboardingController extends Controller
             'phone' => [
                 'required',
                 'string',
-                'regex:/^0[567][0-9]{8}$/'
+                'regex:/^0[567][0-9]{8}$/',
             ],
             'nickname' => ['nullable', 'string', 'max:255'],
             'bio' => ['nullable', 'string'],
-            'profile_picture' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'], // 2MB max            'links' => ['required', 'array', 'min:1', 'max:6'],
+            'profile_picture' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'links' => ['required', 'array', 'min:1', 'max:6'],
             'links.*' => ['required', 'url'],
             'categories' => ['required', 'array', 'min:1', 'max:3'],
             'categories.*' => ['required', 'exists:categories,id'],
@@ -148,26 +155,32 @@ class OnboardingController extends Controller
                 ->store('profile-pictures', 'public');
         }
 
-        $creatorProfile = CreatorProfile::create([
-            'user_id' => $user->id,
+        $creatorProfile = CreatorProfile::firstOrNew(['user_id' => $user->id]);
+        $isNewProfile = ! $creatorProfile->exists;
+
+        $creatorProfile->fill([
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
             'phone' => $validated['phone'],
             'nickname' => data_get($validated, 'nickname'),
             'bio' => data_get($validated, 'bio'),
-            'profile_picture' => $profilePicturePath,
         ]);
 
-        // Store social links
-        foreach ($validated['links'] as $linkUrl) {
+        if ($profilePicturePath !== null) {
+            $creatorProfile->profile_picture = $profilePicturePath;
+        }
+
+        $creatorProfile->save();
+
+        $user->socialLinks()->delete();
+        foreach (array_unique($validated['links']) as $linkUrl) {
             $user->socialLinks()->create(['url' => $linkUrl]);
         }
 
-        // Attach categories
-        $user->categories()->attach($validated['categories']);
+        $user->categories()->sync($validated['categories']);
 
         $user->update(['onboarding_completed_at' => now()]);
 
-        return response()->json($creatorProfile, 201);
+        return response()->json($creatorProfile, $isNewProfile ? 201 : 200);
     }
 }

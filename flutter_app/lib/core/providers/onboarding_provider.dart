@@ -32,6 +32,97 @@ class OnboardingProvider extends ChangeNotifier {
 
   int currentStep = 1;
 
+  void updateCreatorInfo({
+    String? firstName,
+    String? lastName,
+    String? nickname,
+    String? bio,
+    String? profilePicture,
+    String? phone,
+  }) {
+    var changed = false;
+
+    if (firstName != null && firstName != this.firstName) {
+      this.firstName = firstName;
+      changed = true;
+    }
+    if (lastName != null && lastName != this.lastName) {
+      this.lastName = lastName;
+      changed = true;
+    }
+    if (nickname != null && nickname != this.nickname) {
+      this.nickname = nickname;
+      changed = true;
+    }
+    if (bio != null && bio != this.bio) {
+      this.bio = bio;
+      changed = true;
+    }
+    if (profilePicture != null && profilePicture != this.profilePicture) {
+      this.profilePicture = profilePicture;
+      changed = true;
+    }
+    if (phone != null && phone != this.phone) {
+      this.phone = phone;
+      changed = true;
+    }
+
+    if (changed) notifyListeners();
+  }
+
+  void updateBrandInfo({
+    String? brandName,
+    String? phone,
+    String? location,
+    String? website,
+    String? description,
+    String? logo,
+  }) {
+    var changed = false;
+
+    if (brandName != null && brandName != this.brandName) {
+      this.brandName = brandName;
+      changed = true;
+    }
+    if (phone != null && phone != this.phone) {
+      this.phone = phone;
+      changed = true;
+    }
+    if (location != null && location != this.location) {
+      this.location = location;
+      changed = true;
+    }
+    if (website != null && website != this.website) {
+      this.website = website;
+      changed = true;
+    }
+    if (description != null && description != this.description) {
+      this.description = description;
+      changed = true;
+    }
+    if (logo != null && logo != this.logo) {
+      this.logo = logo;
+      changed = true;
+    }
+
+    if (changed) notifyListeners();
+  }
+
+  void setLinks(List<OnboardingSocialLink> links) {
+    this.links = List.of(links);
+    notifyListeners();
+  }
+
+  void setCategories(Iterable<int> categories) {
+    this.categories = categories.toList();
+    notifyListeners();
+  }
+
+  void setIndustries(Iterable<int> industries) {
+    this.industries = industries.toList();
+    notifyListeners();
+  }
+
   void updateStep(int step) {
     currentStep = step;
     notifyListeners();

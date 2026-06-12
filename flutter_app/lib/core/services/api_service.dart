@@ -10,6 +10,42 @@ class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
 
+  static String errorMessage(DioException error) {
+    final data = error.response?.data;
+    if (data is Map) {
+      final errors = data['errors'];
+      if (errors is Map && errors.isNotEmpty) {
+        final firstError = errors.values.first;
+        if (firstError is List && firstError.isNotEmpty) {
+          return firstError.first.toString();
+        }
+        return firstError.toString();
+      }
+
+      final message = data['message'];
+      if (message != null) return message.toString();
+    }
+
+    final message = error.error?.toString();
+    if (message != null &&
+        message.isNotEmpty &&
+        !message.startsWith('DioException')) {
+      return message;
+    }
+
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout) {
+      return 'La connexion a expiré. Vérifiez votre internet puis réessayez.';
+    }
+
+    if (error.type == DioExceptionType.connectionError) {
+      return 'Impossible de joindre le serveur. Vérifiez votre connexion.';
+    }
+
+    return 'Une erreur est survenue. Veuillez réessayer.';
+  }
+
   ApiService._internal() {
     final apiUrl = dotenv.env['API_URL'] ?? 'http://72.62.20.218:8009/api';
     _dio = Dio(
@@ -39,18 +75,7 @@ class ApiService {
           return handler.next(options);
         },
         onError: (error, handler) {
-          String msg = error.message ?? 'Erreur réseau';
-          if (error.response?.data is Map) {
-            final data = error.response!.data as Map;
-            if (data['errors'] != null && data['errors'] is Map) {
-              final errors = data['errors'] as Map;
-              if (errors.isNotEmpty) {
-                msg = errors.values.first[0].toString();
-              }
-            } else if (data['message'] != null) {
-              msg = data['message'].toString();
-            }
-          }
+          final msg = ApiService.errorMessage(error);
           return handler.reject(
             DioException(
               requestOptions: error.requestOptions,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,7 @@ import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/providers/onboarding_provider.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../widgets/onboarding_exit_button.dart';
 
 class CreatorCategoriesScreen extends StatefulWidget {
   const CreatorCategoriesScreen({super.key});
@@ -77,6 +79,14 @@ class _CreatorCategoriesScreenState extends State<CreatorCategoriesScreen> {
       if (!mounted) return;
       onboarding.resetData();
       context.go('/onboarding/success');
+    } on DioException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ApiService.errorMessage(e)),
+          backgroundColor: AppColors.error,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -88,6 +98,17 @@ class _CreatorCategoriesScreenState extends State<CreatorCategoriesScreen> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  void _toggleCategory(int id) {
+    setState(() {
+      if (_selected.contains(id)) {
+        _selected.remove(id);
+      } else {
+        _selected.add(id);
+      }
+    });
+    context.read<OnboardingProvider>().setCategories(_selected);
   }
 
   @override
@@ -106,6 +127,7 @@ class _CreatorCategoriesScreenState extends State<CreatorCategoriesScreen> {
           ),
         ),
         centerTitle: true,
+        actions: const [OnboardingExitButton()],
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -145,15 +167,7 @@ class _CreatorCategoriesScreenState extends State<CreatorCategoriesScreen> {
                       children: _categories.map((cat) {
                         final isSelected = _selected.contains(cat.id);
                         return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              if (isSelected) {
-                                _selected.remove(cat.id);
-                              } else {
-                                _selected.add(cat.id);
-                              }
-                            });
-                          },
+                          onTap: () => _toggleCategory(cat.id),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.symmetric(

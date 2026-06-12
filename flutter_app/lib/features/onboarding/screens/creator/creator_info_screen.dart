@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'dart:io';
 import '../../../../core/providers/onboarding_provider.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../widgets/onboarding_exit_button.dart';
 
 class CreatorInfoScreen extends StatefulWidget {
   const CreatorInfoScreen({super.key});
@@ -35,16 +36,42 @@ class _CreatorInfoScreenState extends State<CreatorInfoScreen> {
     _profilePicturePath = data.profilePicture.isNotEmpty
         ? data.profilePicture
         : null;
+
+    _firstNameController.addListener(_syncDraft);
+    _lastNameController.addListener(_syncDraft);
+    _nicknameController.addListener(_syncDraft);
+    _phoneController.addListener(_syncDraft);
+    _bioController.addListener(_syncDraft);
   }
 
   @override
   void dispose() {
+    _firstNameController.removeListener(_syncDraft);
+    _lastNameController.removeListener(_syncDraft);
+    _nicknameController.removeListener(_syncDraft);
+    _phoneController.removeListener(_syncDraft);
+    _bioController.removeListener(_syncDraft);
     _firstNameController.dispose();
     _lastNameController.dispose();
     _nicknameController.dispose();
     _phoneController.dispose();
     _bioController.dispose();
     super.dispose();
+  }
+
+  void _syncDraft() {
+    context.read<OnboardingProvider>().updateCreatorInfo(
+      firstName: _firstNameController.text,
+      lastName: _lastNameController.text,
+      nickname: _nicknameController.text,
+      phone: _phoneController.text,
+      bio: _bioController.text,
+      profilePicture: _profilePicturePath ?? '',
+    );
+
+    if (_phoneError != null && mounted) {
+      setState(() => _phoneError = null);
+    }
   }
 
   Future<void> _pickImage() async {
@@ -54,18 +81,25 @@ class _CreatorInfoScreenState extends State<CreatorInfoScreen> {
       imageQuality: 80,
     );
     if (image != null) {
+      if (!mounted) return;
       setState(() => _profilePicturePath = image.path);
+      context.read<OnboardingProvider>().updateCreatorInfo(
+        profilePicture: image.path,
+      );
     }
   }
 
   void _next() {
     final onboarding = context.read<OnboardingProvider>();
-    final phoneError = onboarding.validatePhoneNumber(_phoneController.text);
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    final phone = _phoneController.text.trim();
+    final phoneError = onboarding.validatePhoneNumber(phone);
     if (phoneError != null) {
       setState(() => _phoneError = phoneError);
       return;
     }
-    if (_firstNameController.text.isEmpty || _lastNameController.text.isEmpty) {
+    if (firstName.isEmpty || lastName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Le prénom et le nom sont requis'),
@@ -75,12 +109,14 @@ class _CreatorInfoScreenState extends State<CreatorInfoScreen> {
       return;
     }
 
-    onboarding.firstName = _firstNameController.text;
-    onboarding.lastName = _lastNameController.text;
-    onboarding.nickname = _nicknameController.text;
-    onboarding.phone = _phoneController.text;
-    onboarding.bio = _bioController.text;
-    onboarding.profilePicture = _profilePicturePath ?? '';
+    onboarding.updateCreatorInfo(
+      firstName: firstName,
+      lastName: lastName,
+      nickname: _nicknameController.text.trim(),
+      phone: phone,
+      bio: _bioController.text.trim(),
+      profilePicture: _profilePicturePath ?? '',
+    );
     onboarding.updateStep(2);
 
     context.push('/onboarding/creator/social');
@@ -102,6 +138,7 @@ class _CreatorInfoScreenState extends State<CreatorInfoScreen> {
           ),
         ),
         centerTitle: true,
+        actions: const [OnboardingExitButton()],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),

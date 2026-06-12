@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/providers/onboarding_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/social_utils.dart';
+import '../../widgets/onboarding_exit_button.dart';
 
 class BrandSocialScreen extends StatefulWidget {
   const BrandSocialScreen({super.key});
@@ -41,11 +42,29 @@ class _BrandSocialScreenState extends State<BrandSocialScreen> {
       );
       _linkController.clear();
     });
+    _syncLinks();
   }
 
-  void _removeLink(int index) => setState(() => _links.removeAt(index));
+  void _removeLink(int index) {
+    setState(() => _links.removeAt(index));
+    _syncLinks();
+  }
+
+  void _syncLinks() {
+    context.read<OnboardingProvider>().setLinks(_links);
+  }
 
   void _next() {
+    if (_links.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ajoutez au moins un lien social'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     final onboarding = context.read<OnboardingProvider>();
     onboarding.links = _links;
     onboarding.updateStep(3);
@@ -68,6 +87,7 @@ class _BrandSocialScreenState extends State<BrandSocialScreen> {
           ),
         ),
         centerTitle: true,
+        actions: const [OnboardingExitButton()],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),

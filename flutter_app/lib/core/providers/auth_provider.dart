@@ -32,8 +32,8 @@ class AuthProvider extends ChangeNotifier {
         _user = User.fromJson(storedUserJson);
         _api.setToken(storedToken);
 
-        // Fetch the newest data to ensure profile relations are populated
-        refreshUser();
+        // Fetch the newest data before routing so onboarding state is not stale.
+        await refreshUser();
       }
     } catch (e) {
       debugPrint('Failed to load auth: $e');
