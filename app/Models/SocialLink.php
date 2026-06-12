@@ -11,6 +11,10 @@ class SocialLink extends Model
 
     protected $fillable = ['user_id', 'url', 'is_verified'];
 
+    protected $casts = [
+        'is_verified' => 'boolean',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

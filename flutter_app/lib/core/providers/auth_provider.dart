@@ -83,14 +83,17 @@ class AuthProvider extends ChangeNotifier {
     await _api.resendVerificationEmail();
   }
 
-  Future<void> refreshUser() async {
+  Future<User?> refreshUser({bool throwOnError = false}) async {
     try {
       final updatedUser = await _api.getProfile();
       _user = updatedUser;
       await _storage.saveUser(updatedUser.toJson());
       notifyListeners();
+      return updatedUser;
     } catch (e) {
       debugPrint('Failed to refresh user: $e');
+      if (throwOnError) rethrow;
+      return null;
     }
   }
 

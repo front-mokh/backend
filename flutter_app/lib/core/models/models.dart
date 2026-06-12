@@ -10,6 +10,16 @@ UserType userTypeFromString(String s) =>
 String userTypeToString(UserType t) =>
     t == UserType.brand ? 'brand' : 'creator';
 
+bool boolFromJson(dynamic value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  if (value is String) {
+    final normalized = value.toLowerCase().trim();
+    return normalized == 'true' || normalized == '1';
+  }
+  return false;
+}
+
 // ─── User ────────────────────────────────────────────────────
 
 class User {
@@ -208,7 +218,7 @@ class SocialLink {
     id: json['id'] as int,
     platform: json['platform'] as String? ?? '',
     url: json['url'] as String? ?? '',
-    isVerified: json['is_verified'] as bool? ?? false,
+    isVerified: boolFromJson(json['is_verified']),
   );
 
   Map<String, dynamic> toJson() => {
@@ -587,7 +597,7 @@ class Message {
     senderId: json['sender_id'] as int,
     content: json['content'] as String?,
     attachment: json['attachment'] as String?,
-    isRead: json['is_read'] as bool? ?? false,
+    isRead: boolFromJson(json['is_read']),
     createdAt: json['created_at'] as String,
     sender: json['sender'] != null ? User.fromJson(json['sender']) : null,
   );

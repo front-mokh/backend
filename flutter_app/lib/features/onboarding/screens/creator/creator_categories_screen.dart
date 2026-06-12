@@ -75,8 +75,22 @@ class _CreatorCategoriesScreenState extends State<CreatorCategoriesScreen> {
       );
 
       if (!mounted) return;
-      await context.read<AuthProvider>().refreshUser();
+      final refreshedUser = await context.read<AuthProvider>().refreshUser(
+        throwOnError: true,
+      );
       if (!mounted) return;
+      if (refreshedUser?.isOnboarded != true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Profil enregistré, mais l'application n'a pas encore reçu la confirmation. Réessayez dans un instant.",
+            ),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+
       onboarding.resetData();
       context.go('/onboarding/success');
     } on DioException catch (e) {

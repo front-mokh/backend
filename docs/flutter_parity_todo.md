@@ -28,6 +28,7 @@
 - Fixed brand announcement list refresh after a successful announcement publish.
 - Removed duplicate profile app bars and refreshed brand/creator profile data when profile tabs open.
 - Added profile pull-to-refresh and explicit fallback values for missing phone/location fields.
+- Fixed creator/brand onboarding completion state so successful final submits do not route users back to the first profile step.
 - Audited Flutter pages for placeholders and incomplete parity.
 - Added backend `GET /api/creators` for brand-side creator discovery and `GET /api/applications/{application}` for single application details.
 - Added backend tests for creator discovery and application-detail authorization.
