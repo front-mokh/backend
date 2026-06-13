@@ -86,6 +86,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - [x] Added `GET /api/collaborations/{collaboration}/messages` with cursor pagination, authorization, and a message lookup index.
 - [x] Updated brand and creator Flutter collaboration chats to load the latest 30 messages first and load older messages on request.
 - [x] Kept realtime message append/read-receipt behavior working without re-fetching the full collaboration after every send.
+- [x] Deployed the chat-pagination backend files to the VPS, ran the message index migration, cleared caches, and restarted `celebrity_back`.
 
 ## Missing Or Stubbed Flutter Screens
 
@@ -104,7 +105,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - [x] `php artisan test` passes: 46 tests, 171 assertions.
 - [x] `flutter analyze` passes with no issues.
 - [x] `flutter test` passes.
-- [x] `flutter build apk --release` passes after FCM dependencies.
+- [x] `flutter build apk --release` passes after chat pagination.
 
 ## Next Session: Start Here
 
