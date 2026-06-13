@@ -767,7 +767,7 @@ class _State extends State<BrandCollaborationDetailsScreen> {
       itemCount: subs.length,
       itemBuilder: (context, i) {
         final sub = subs[i];
-        final typeName = sub.deliverableType?.name ?? 'Livrable #${sub.id}';
+        final title = _submissionTitle(sub);
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
@@ -782,14 +782,17 @@ class _State extends State<BrandCollaborationDetailsScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    typeName,
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.text,
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.text,
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -901,6 +904,35 @@ class _State extends State<BrandCollaborationDetailsScreen> {
         );
       },
     );
+  }
+
+  String _submissionTitle(DeliverableSubmission submission) {
+    final typeName =
+        submission.deliverableType?.name ?? 'Livrable #${submission.id}';
+    final platformName = _submissionPlatformName(submission);
+    if (platformName == null || platformName.isEmpty) return typeName;
+    return '$typeName pour $platformName';
+  }
+
+  String? _submissionPlatformName(DeliverableSubmission submission) {
+    final announcement = _collaboration?.announcement;
+    final platforms = announcement?.platforms ?? const <PlatformModel>[];
+    final deliverables =
+        announcement?.deliverables ?? const <DeliverableWithPivot>[];
+    int? platformId = submission.deliverableType?.platformId;
+    if (platformId == null) {
+      for (final deliverable in deliverables) {
+        if (deliverable.id == submission.deliverableTypeId) {
+          platformId = deliverable.platformId;
+          break;
+        }
+      }
+    }
+    if (platformId == null) return null;
+    for (final platform in platforms) {
+      if (platform.id == platformId) return platform.name;
+    }
+    return null;
   }
 
   Widget _detailCard(IconData icon, String label, String value) {

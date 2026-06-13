@@ -38,6 +38,7 @@
 - Hardened Flutter model parsing so Laravel numeric IDs/counts are accepted as either integers or strings.
 - Added required deliverables by platform to brand/creator candidature detail views and the creator collaboration deliverables tab.
 - Fixed Android bottom safe-area spacing for the creator deliverable submit action and modal submit button.
+- Added platform names to submitted deliverable titles and made candidature announcement cards open their announcement details.
 
 ## Missing Or Stubbed Flutter Pages
 

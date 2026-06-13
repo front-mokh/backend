@@ -862,7 +862,7 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
   }
 
   Widget _submissionCard(DeliverableSubmission sub) {
-    final typeName = sub.deliverableType?.name ?? 'Livrable #${sub.id}';
+    final title = _submissionTitle(sub);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -879,7 +879,7 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
             children: [
               Expanded(
                 child: Text(
-                  typeName,
+                  title,
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -965,6 +965,35 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
         ],
       ),
     );
+  }
+
+  String _submissionTitle(DeliverableSubmission submission) {
+    final typeName =
+        submission.deliverableType?.name ?? 'Livrable #${submission.id}';
+    final platformName = _submissionPlatformName(submission);
+    if (platformName == null || platformName.isEmpty) return typeName;
+    return '$typeName pour $platformName';
+  }
+
+  String? _submissionPlatformName(DeliverableSubmission submission) {
+    final announcement = _collab?.announcement;
+    final platforms = announcement?.platforms ?? const <PlatformModel>[];
+    final deliverables =
+        announcement?.deliverables ?? const <DeliverableWithPivot>[];
+    int? platformId = submission.deliverableType?.platformId;
+    if (platformId == null) {
+      for (final deliverable in deliverables) {
+        if (deliverable.id == submission.deliverableTypeId) {
+          platformId = deliverable.platformId;
+          break;
+        }
+      }
+    }
+    if (platformId == null) return null;
+    for (final platform in platforms) {
+      if (platform.id == platformId) return platform.name;
+    }
+    return null;
   }
 
   Widget _submissionStatus(String status) {

@@ -174,6 +174,9 @@ class _BrandApplicationDetailsScreenState
                       Icons.campaign_outlined,
                       application.announcement?.title ??
                           'Annonce #${application.announcementId}',
+                      onTap: () => context.push(
+                        '/brand/announcement/${application.announcementId}',
+                      ),
                     ),
                     _infoCard(
                       Icons.attach_money,
@@ -642,8 +645,13 @@ class _BrandApplicationDetailsScreenState
     );
   }
 
-  Widget _infoCard(IconData icon, String value, {Color? color}) {
-    return Container(
+  Widget _infoCard(
+    IconData icon,
+    String value, {
+    Color? color,
+    VoidCallback? onTap,
+  }) {
+    final card = Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -665,8 +673,24 @@ class _BrandApplicationDetailsScreenState
               ),
             ),
           ),
+          if (onTap != null) ...[
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.open_in_new,
+              size: 16,
+              color: AppColors.textTertiary,
+            ),
+          ],
         ],
       ),
+    );
+
+    if (onTap == null) return card;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: card,
     );
   }
 
