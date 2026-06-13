@@ -124,7 +124,12 @@ class _State extends State<BrandCollaborationDetailsScreen> {
       if (!mounted || _collaboration == null) return;
 
       setState(() {
-        _collaboration = _collaboration!.copyWith(messages: page.data);
+        _collaboration = _collaboration!.copyWith(
+          messages: _mergeMessages(
+            page.data,
+            _collaboration!.messages ?? <Message>[],
+          ),
+        );
         _hasMoreMessages = page.hasMore;
         _nextMessagesCursor = page.nextCursor;
         _isLoadingMessages = false;
@@ -176,7 +181,7 @@ class _State extends State<BrandCollaborationDetailsScreen> {
 
       setState(() {
         _collaboration = _collaboration!.copyWith(
-          messages: [...olderMessages, ...currentMessages],
+          messages: _mergeMessages(olderMessages, currentMessages),
         );
         _hasMoreMessages = page.hasMore;
         _nextMessagesCursor = page.nextCursor;
@@ -314,6 +319,18 @@ class _State extends State<BrandCollaborationDetailsScreen> {
         unreadCount: int.tryParse(payload['unread_count']?.toString() ?? ''),
       );
     });
+  }
+
+  List<Message> _mergeMessages(
+    List<Message> firstMessages,
+    List<Message> secondMessages,
+  ) {
+    final byId = <int, Message>{};
+    for (final message in [...firstMessages, ...secondMessages]) {
+      byId[message.id] = message;
+    }
+
+    return byId.values.toList()..sort((a, b) => a.id.compareTo(b.id));
   }
 
   void _appendMessage(Message message) {

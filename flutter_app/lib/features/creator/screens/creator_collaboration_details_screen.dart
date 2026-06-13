@@ -122,7 +122,9 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
       if (!mounted || _collab == null) return;
 
       setState(() {
-        _collab = _collab!.copyWith(messages: page.data);
+        _collab = _collab!.copyWith(
+          messages: _mergeMessages(page.data, _collab!.messages ?? <Message>[]),
+        );
         _hasMoreMessages = page.hasMore;
         _nextMessagesCursor = page.nextCursor;
         _isLoadingMessages = false;
@@ -174,7 +176,7 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
 
       setState(() {
         _collab = _collab!.copyWith(
-          messages: [...olderMessages, ...currentMessages],
+          messages: _mergeMessages(olderMessages, currentMessages),
         );
         _hasMoreMessages = page.hasMore;
         _nextMessagesCursor = page.nextCursor;
@@ -246,6 +248,18 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
         unreadCount: int.tryParse(payload['unread_count']?.toString() ?? ''),
       );
     });
+  }
+
+  List<Message> _mergeMessages(
+    List<Message> firstMessages,
+    List<Message> secondMessages,
+  ) {
+    final byId = <int, Message>{};
+    for (final message in [...firstMessages, ...secondMessages]) {
+      byId[message.id] = message;
+    }
+
+    return byId.values.toList()..sort((a, b) => a.id.compareTo(b.id));
   }
 
   void _appendMessage(Message message) {
