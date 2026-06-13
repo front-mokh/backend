@@ -82,6 +82,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - [x] Added `/api/push-tokens` register/delete endpoints plus legacy Expo endpoint compatibility.
 - [x] Added Flutter token registration on login/session restore, token cleanup on logout, foreground notification display, and notification tap deep-link handling.
 - [x] Added backend feature tests for push-token registration, validation, deletion, and legacy Expo compatibility.
+- [x] Deployed the push-token backend files to the VPS, ran `php artisan migrate --force`, cleared caches, and restarted `celebrity_back`.
 
 ## Missing Or Stubbed Flutter Screens
 
@@ -104,11 +105,14 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 
 ## Next Session: Start Here
 
-1. Create/configure a Firebase project and add Flutter Firebase values to `flutter_app/.env`.
-2. Add Laravel/VPS FCM credentials: `FCM_PROJECT_ID` plus `FCM_SERVICE_ACCOUNT_JSON` or `FCM_SERVICE_ACCOUNT_PATH`.
-3. Run the new migration on the VPS: `php artisan migrate --force`.
-4. Manually test push notifications on Android: foreground, background, terminated app, and tap-to-open route.
-5. Configure Apple APNs key/capability in Firebase before testing iOS push.
+1. Create/configure the Firebase project for Android/iOS push.
+2. Add Firebase client values to `flutter_app/.env`.
+3. Add Laravel/VPS FCM credentials: `FCM_PROJECT_ID` plus `FCM_SERVICE_ACCOUNT_JSON` or `FCM_SERVICE_ACCOUNT_PATH`.
+4. Clear VPS config cache and restart PM2 after adding FCM credentials.
+5. Rebuild the APK after Firebase client values are present.
+6. Manually test Android push: foreground, background, terminated app, and tap-to-open route.
+7. Configure Apple APNs key/capability in Firebase before testing iOS push.
+8. Manually test iOS push: foreground, background, terminated app, and tap-to-open route.
 
 ## Known Risks / Watch Items
 

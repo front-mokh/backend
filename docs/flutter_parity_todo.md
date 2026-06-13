@@ -94,9 +94,14 @@
 - Decide push strategy for Flutter:
   - [x] Replace or extend Expo push token backend flow with Firebase Cloud Messaging for Flutter.
   - [x] Add device token registration, refresh, logout cleanup, and push payload route mapping.
-  - Add Firebase project credentials to Flutter `.env` and Laravel/VPS environment.
-  - Configure iOS APNs key/capability in Firebase/Apple before iOS push release.
-  - Manually test foreground, background, terminated-app, and notification-tap flows on Android/iOS.
+  - [x] Run the `push_device_tokens` migration on the VPS.
+  - [ ] Create/configure the Firebase project for Android/iOS push.
+  - [ ] Add Firebase client values to `flutter_app/.env` and rebuild the APK.
+  - [ ] Add Laravel/VPS FCM credentials: `FCM_PROJECT_ID` plus `FCM_SERVICE_ACCOUNT_JSON` or `FCM_SERVICE_ACCOUNT_PATH`.
+  - [ ] Clear VPS config cache and restart PM2 after adding FCM credentials.
+  - [ ] Manually test Android push in foreground, background, terminated-app, and notification-tap flows.
+  - [ ] Configure iOS APNs key/capability in Firebase/Apple before iOS push release.
+  - [ ] Manually test iOS push in foreground, background, terminated-app, and notification-tap flows.
 
 ## Priority 3: UX And Mobile Polish
 
