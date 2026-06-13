@@ -13,6 +13,9 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - Creator/brand onboarding completion now refreshes state safely after submit and no longer loops back to the profile info step when social links serialize booleans as `0/1`.
 - Flutter now keeps the root GoRouter stable across auth refreshes so brand/creator profile tabs do not bounce back to the default announcements page.
 - Creator announcement details now use a richer modern layout with safe-area bottom actions and visible existing-application state.
+- Creator announcement details now group expected deliverables by platform so creators can see which deliverable belongs to which channel.
+- Creator/brand application detail actions now use SafeArea bottom footers to avoid Android bottom-area overlap.
+- Creator collaboration deliverable submission now uses platform-first selection, then specific deliverable selection, and shows real backend validation messages.
 - Creator applications now block duplicate applies in the UI, while the backend returns a French `409` conflict if a duplicate submit still happens.
 - Brand announcement creation now refreshes the announcement list immediately after a successful publish.
 - Brand and creator profile tabs now refresh profile data on open and no longer render a duplicate inner "Profil" app bar.
@@ -53,7 +56,10 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - [x] Added a backend cast for `SocialLink::is_verified` and deployed it to the VPS.
 - [x] Fixed root router recreation during profile refreshes, which sent brand users from Profile back to Announcements.
 - [x] Redesigned the creator announcement detail page with hero media, compact info tiles, sections, attachment access, and a SafeArea action footer.
+- [x] Grouped creator announcement deliverables under their platform instead of showing disconnected platform/deliverable sections.
 - [x] Added `current_user_application` to announcement details for creators and used it to replace duplicate apply buttons with "Voir ma candidature".
+- [x] Moved creator "Voir l'annonce" and brand "Ouvrir la collaboration" application-detail actions into SafeArea footers.
+- [x] Added platform-first deliverable submission in creator collaboration details and backend validation for requested deliverables.
 - [x] Improved the creator apply form with SafeArea footer actions, integer budget submission, and cleaner API error messages.
 - [x] Added backend tests for duplicate application rejection and current creator application payloads.
 - [x] Fixed brand announcement list refresh after creating a new announcement.

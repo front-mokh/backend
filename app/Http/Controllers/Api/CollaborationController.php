@@ -49,7 +49,8 @@ class CollaborationController extends Controller
 
         // Load relationships
         $collaboration->load([
-            'announcement.deliverables', 
+            'announcement.platforms',
+            'announcement.deliverables',
             'brand.brandProfile', 
             'creator.creatorProfile', 
             'application',
@@ -130,7 +131,8 @@ class CollaborationController extends Controller
         ]);
 
         return response()->json($collaboration->fresh([
-            'announcement',
+            'announcement.platforms',
+            'announcement.deliverables',
             'brand.brandProfile',
             'creator.creatorProfile',
             'application',
@@ -270,6 +272,17 @@ class CollaborationController extends Controller
             'url' => 'nullable|url',
             'attachment' => 'nullable|file|max:20480', // 20MB
         ]);
+
+        $isExpectedDeliverable = $collaboration->announcement
+            ->deliverables()
+            ->where('deliverable_types.id', $validated['deliverable_type_id'])
+            ->exists();
+
+        if (! $isExpectedDeliverable) {
+            return response()->json([
+                'message' => "Ce livrable n'est pas demandé pour cette collaboration.",
+            ], 422);
+        }
 
         $attachmentPath = null;
         if ($request->hasFile('attachment')) {

@@ -863,7 +863,10 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
   }
 
   void _showSubmitDeliverableModal() {
-    final deliverables = _collab?.announcement?.deliverables ?? [];
+    final announcement = _collab?.announcement;
+    final deliverables =
+        announcement?.deliverables ?? const <DeliverableWithPivot>[];
+    final platforms = announcement?.platforms ?? const <PlatformModel>[];
     if (deliverables.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -874,7 +877,26 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
       return;
     }
 
-    int? selectedDeliverableId = deliverables.first.id;
+    final platformsWithDeliverables = platforms
+        .where(
+          (platform) => deliverables.any(
+            (deliverable) => deliverable.platformId == platform.id,
+          ),
+        )
+        .toList();
+    int? selectedPlatformId = platformsWithDeliverables.isNotEmpty
+        ? platformsWithDeliverables.first.id
+        : null;
+    List<DeliverableWithPivot> visibleDeliverables() {
+      if (selectedPlatformId == null) return deliverables;
+      return deliverables
+          .where((deliverable) => deliverable.platformId == selectedPlatformId)
+          .toList();
+    }
+
+    int? selectedDeliverableId = visibleDeliverables().isNotEmpty
+        ? visibleDeliverables().first.id
+        : deliverables.first.id;
     final urlController = TextEditingController();
     File? selectedFile;
     bool isSubmitting = false;
@@ -889,54 +911,48 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 24,
-                right: 24,
-                top: 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Soumettre un livrable",
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.text,
+            final currentDeliverables = visibleDeliverables();
+            return SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  24,
+                  24,
+                  24,
+                  MediaQuery.of(context).viewInsets.bottom + 18,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Soumettre un livrable",
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.text,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                  Text(
-                    'Livrable concerné',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<int>(
-                        value: selectedDeliverableId,
-                        isExpanded: true,
-                        dropdownColor: AppColors.surface,
-                        items: deliverables
+                    if (platformsWithDeliverables.isNotEmpty) ...[
+                      Text(
+                        'Plateforme',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _modalDropdown<int>(
+                        value: selectedPlatformId,
+                        items: platformsWithDeliverables
                             .map(
-                              (d) => DropdownMenuItem<int>(
-                                value: d.id,
+                              (platform) => DropdownMenuItem<int>(
+                                value: platform.id,
                                 child: Text(
-                                  d.name,
+                                  platform.name,
                                   style: GoogleFonts.inter(
                                     color: AppColors.text,
                                   ),
@@ -946,222 +962,306 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
                             .toList(),
                         onChanged: (val) {
                           if (val != null) {
-                            setModalState(() => selectedDeliverableId = val);
+                            setModalState(() {
+                              selectedPlatformId = val;
+                              final nextDeliverables = visibleDeliverables();
+                              selectedDeliverableId =
+                                  nextDeliverables.isNotEmpty
+                                  ? nextDeliverables.first.id
+                                  : null;
+                            });
                           }
                         },
                       ),
-                    ),
-                  ),
+                      const SizedBox(height: 20),
+                    ],
 
-                  const SizedBox(height: 20),
-                  Text(
-                    'URL du livrable (optionnel)',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: urlController,
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      color: AppColors.text,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'https://...',
-                      hintStyle: GoogleFonts.inter(
-                        color: AppColors.textTertiary,
-                      ),
-                      filled: true,
-                      fillColor: AppColors.background,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColors.primary),
+                    Text(
+                      'Livrable concerné',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.text,
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    _modalDropdown<int>(
+                      value: selectedDeliverableId,
+                      items: currentDeliverables
+                          .map(
+                            (deliverable) => DropdownMenuItem<int>(
+                              value: deliverable.id,
+                              child: Text(
+                                '${deliverable.quantity} x ${deliverable.name}',
+                                style: GoogleFonts.inter(color: AppColors.text),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setModalState(() => selectedDeliverableId = val);
+                        }
+                      },
+                    ),
 
-                  const SizedBox(height: 20),
-                  Text(
-                    'Fichier joint (optionnel)',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  InkWell(
-                    onTap: () async {
-                      FilePickerResult? result = await FilePicker.platform
-                          .pickFiles();
-                      if (result != null && result.files.single.path != null) {
-                        setModalState(() {
-                          selectedFile = File(result.files.single.path!);
-                        });
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 16,
-                        horizontal: 16,
+                    const SizedBox(height: 20),
+                    Text(
+                      'URL du livrable (optionnel)',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.text,
                       ),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: AppColors.border,
-                          style: BorderStyle.solid,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: urlController,
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        color: AppColors.text,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'https://...',
+                        hintStyle: GoogleFonts.inter(
+                          color: AppColors.textTertiary,
+                        ),
+                        filled: true,
+                        fillColor: AppColors.background,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(
+                            color: AppColors.primary,
+                          ),
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.attach_file,
-                            color: selectedFile != null
-                                ? AppColors.primary
-                                : AppColors.textTertiary,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              selectedFile != null
-                                  ? selectedFile!.path.split('/').last
-                                  : 'Sélectionner un fichier',
-                              style: GoogleFonts.inter(
-                                color: selectedFile != null
-                                    ? AppColors.text
-                                    : AppColors.textTertiary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (selectedFile != null)
-                            IconButton(
-                              icon: const Icon(
-                                Icons.close,
-                                size: 20,
-                                color: AppColors.textSecondary,
-                              ),
-                              onPressed: () =>
-                                  setModalState(() => selectedFile = null),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                        ],
+                    ),
+
+                    const SizedBox(height: 20),
+                    Text(
+                      'Fichier joint (optionnel)',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.text,
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () async {
+                        FilePickerResult? result = await FilePicker.platform
+                            .pickFiles();
+                        if (result != null &&
+                            result.files.single.path != null) {
+                          setModalState(() {
+                            selectedFile = File(result.files.single.path!);
+                          });
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.attach_file,
+                              color: selectedFile != null
+                                  ? AppColors.primary
+                                  : AppColors.textTertiary,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                selectedFile != null
+                                    ? selectedFile!.path.split('/').last
+                                    : 'Sélectionner un fichier',
+                                style: GoogleFonts.inter(
+                                  color: selectedFile != null
+                                      ? AppColors.text
+                                      : AppColors.textTertiary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (selectedFile != null)
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.close,
+                                  size: 20,
+                                  color: AppColors.textSecondary,
+                                ),
+                                onPressed: () =>
+                                    setModalState(() => selectedFile = null),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
 
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: isSubmitting
-                          ? null
-                          : () async {
-                              if (urlController.text.trim().isEmpty &&
-                                  selectedFile == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Veuillez entrer une URL ou choisir un fichier',
-                                    ),
-                                    backgroundColor: AppColors.error,
-                                  ),
-                                );
-                                return;
-                              }
-                              setModalState(() => isSubmitting = true);
-                              try {
-                                final formDataParams = <String, dynamic>{
-                                  'deliverable_type_id': selectedDeliverableId,
-                                };
-                                if (urlController.text.trim().isNotEmpty) {
-                                  formDataParams['url'] = urlController.text
-                                      .trim();
-                                }
-                                if (selectedFile != null) {
-                                  formDataParams['attachment'] =
-                                      await MultipartFile.fromFile(
-                                        selectedFile!.path,
-                                        filename: selectedFile!.path
-                                            .split('/')
-                                            .last,
-                                      );
-                                }
-
-                                await ApiService().submitDeliverable(
-                                  widget.id,
-                                  FormData.fromMap(formDataParams),
-                                );
-                                if (!context.mounted || !mounted) return;
-                                Navigator.pop(context);
-                                _load();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Livrable envoyé !'),
-                                    backgroundColor: AppColors.success,
-                                  ),
-                                );
-                              } catch (e) {
-                                if (context.mounted && mounted) {
-                                  setModalState(() => isSubmitting = false);
+                    const SizedBox(height: 28),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                if (selectedDeliverableId == null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Erreur lors de l\'envoi'),
+                                      content: Text('Sélectionnez un livrable'),
                                       backgroundColor: AppColors.error,
                                     ),
                                   );
+                                  return;
                                 }
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                                if (urlController.text.trim().isEmpty &&
+                                    selectedFile == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Veuillez entrer une URL ou choisir un fichier',
+                                      ),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                setModalState(() => isSubmitting = true);
+                                try {
+                                  final formDataParams = <String, dynamic>{
+                                    'deliverable_type_id':
+                                        selectedDeliverableId,
+                                  };
+                                  if (urlController.text.trim().isNotEmpty) {
+                                    formDataParams['url'] = urlController.text
+                                        .trim();
+                                  }
+                                  if (selectedFile != null) {
+                                    formDataParams['attachment'] =
+                                        await MultipartFile.fromFile(
+                                          selectedFile!.path,
+                                          filename: selectedFile!.path
+                                              .split('/')
+                                              .last,
+                                        );
+                                  }
+
+                                  await ApiService().submitDeliverable(
+                                    widget.id,
+                                    FormData.fromMap(formDataParams),
+                                  );
+                                  if (!context.mounted || !mounted) return;
+                                  Navigator.pop(context);
+                                  _load();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Livrable envoyé !'),
+                                      backgroundColor: AppColors.success,
+                                    ),
+                                  );
+                                } on DioException catch (e) {
+                                  if (context.mounted && mounted) {
+                                    setModalState(() => isSubmitting = false);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          ApiService.errorMessage(e),
+                                        ),
+                                        backgroundColor: AppColors.error,
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted && mounted) {
+                                    setModalState(() => isSubmitting = false);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Erreur: ${e.toString()}',
+                                        ),
+                                        backgroundColor: AppColors.error,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                'Envoyer',
+                                style: GoogleFonts.inter(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
-                      child: isSubmitting
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Text(
-                              'Envoyer',
-                              style: GoogleFonts.inter(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                  ],
+                ),
               ),
             );
           },
         );
       },
+    );
+  }
+
+  Widget _modalDropdown<T>({
+    required T? value,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: value,
+          isExpanded: true,
+          dropdownColor: AppColors.surface,
+          items: items,
+          onChanged: onChanged,
+        ),
+      ),
     );
   }
 }

@@ -156,12 +156,13 @@ class _CreatorApplicationDetailsScreenState
                       _sectionTitle('Description annonce'),
                       _bodyCard(announcement!.description),
                     ],
-                    const SizedBox(height: 24),
-                    _actions(application),
                   ],
                 ),
               ),
             ),
+      bottomNavigationBar: application == null || _isLoading
+          ? null
+          : _actions(application),
     );
   }
 
@@ -224,50 +225,69 @@ class _CreatorApplicationDetailsScreenState
 
   Widget _actions(Application application) {
     final collaboration = application.collaboration;
-    if (application.status == 'accepted' && collaboration != null) {
-      return SizedBox(
-        width: double.infinity,
-        height: 50,
-        child: ElevatedButton.icon(
-          onPressed: () =>
-              context.push('/creator/collaboration/${collaboration.id}'),
-          icon: const Icon(Icons.work_outline, color: Colors.white),
-          label: Text(
-            'Ouvrir la collaboration',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-          ),
-        ),
-      );
+    final announcement = application.announcement;
+    if (collaboration == null && announcement == null) {
+      return const SizedBox.shrink();
     }
 
-    final announcement = application.announcement;
-    if (announcement == null) return const SizedBox.shrink();
+    final isCollaborationAction =
+        application.status == 'accepted' && collaboration != null;
 
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: OutlinedButton.icon(
-        onPressed: () =>
-            context.push('/creator/announcement/${announcement.id}'),
-        icon: const Icon(Icons.open_in_new, color: AppColors.primary),
-        label: Text(
-          "Voir l'annonce",
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: const Border(
+          top: BorderSide(color: AppColors.border, width: 0.5),
         ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          side: const BorderSide(color: AppColors.primary),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadowColor.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, -4),
           ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        child: SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: isCollaborationAction
+              ? ElevatedButton.icon(
+                  onPressed: () => context.push(
+                    '/creator/collaboration/${collaboration.id}',
+                  ),
+                  icon: const Icon(Icons.work_outline, color: Colors.white),
+                  label: Text(
+                    'Ouvrir la collaboration',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                )
+              : OutlinedButton.icon(
+                  onPressed: () =>
+                      context.push('/creator/announcement/${announcement!.id}'),
+                  icon: const Icon(Icons.open_in_new, color: AppColors.primary),
+                  label: Text(
+                    "Voir l'annonce",
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
         ),
       ),
     );

@@ -132,38 +132,13 @@ class _State extends State<CreatorAnnouncementDetailsScreen> {
                         ),
                       ),
                     ],
-                    if ((announcement.platforms ?? []).isNotEmpty) ...[
+                    if ((announcement.platforms ?? []).isNotEmpty ||
+                        (announcement.deliverables ?? []).isNotEmpty) ...[
                       const SizedBox(height: 12),
                       _section(
-                        title: 'Plateformes',
-                        icon: Icons.public_outlined,
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: announcement.platforms!
-                              .map((platform) => _chip(platform.name))
-                              .toList(),
-                        ),
-                      ),
-                    ],
-                    if ((announcement.deliverables ?? []).isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      _section(
-                        title: 'Livrables',
+                        title: 'Livrables par plateforme',
                         icon: Icons.inventory_2_outlined,
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: announcement.deliverables!
-                              .map(
-                                (deliverable) => _chip(
-                                  '${deliverable.quantity} x ${deliverable.name}',
-                                  color: AppColors.accentLight,
-                                  textColor: AppColors.text,
-                                ),
-                              )
-                              .toList(),
-                        ),
+                        child: _deliverablesByPlatform(announcement),
                       ),
                     ],
                     if (_hasValue(announcement.attachment)) ...[
@@ -454,6 +429,123 @@ class _State extends State<CreatorAnnouncementDetailsScreen> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _deliverablesByPlatform(Announcement announcement) {
+    final platforms = announcement.platforms ?? const <PlatformModel>[];
+    final deliverables =
+        announcement.deliverables ?? const <DeliverableWithPivot>[];
+
+    if (deliverables.isEmpty && platforms.isNotEmpty) {
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: platforms.map((platform) => _chip(platform.name)).toList(),
+      );
+    }
+
+    if (platforms.isEmpty) {
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: deliverables
+            .map(
+              (deliverable) => _chip(
+                '${deliverable.quantity} x ${deliverable.name}',
+                color: AppColors.accentLight,
+                textColor: AppColors.text,
+              ),
+            )
+            .toList(),
+      );
+    }
+
+    final children = <Widget>[];
+    for (final platform in platforms) {
+      final platformDeliverables = deliverables
+          .where((deliverable) => deliverable.platformId == platform.id)
+          .toList();
+      children.add(
+        _platformDeliverablesBlock(platform.name, platformDeliverables),
+      );
+    }
+
+    final orphanDeliverables = deliverables
+        .where(
+          (deliverable) => !platforms.any(
+            (platform) => platform.id == deliverable.platformId,
+          ),
+        )
+        .toList();
+    if (orphanDeliverables.isNotEmpty) {
+      children.add(_platformDeliverablesBlock('Autres', orphanDeliverables));
+    }
+
+    return Column(children: children);
+  }
+
+  Widget _platformDeliverablesBlock(
+    String platformName,
+    List<DeliverableWithPivot> deliverables,
+  ) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.public_outlined,
+                size: 16,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  platformName,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (deliverables.isEmpty)
+            Text(
+              'Aucun livrable spécifique demandé',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: deliverables
+                  .map(
+                    (deliverable) => _chip(
+                      '${deliverable.quantity} x ${deliverable.name}',
+                      color: AppColors.surface,
+                      textColor: AppColors.text,
+                    ),
+                  )
+                  .toList(),
+            ),
         ],
       ),
     );

@@ -8,7 +8,9 @@ use App\Models\Announcement;
 use App\Models\Application;
 use App\Models\Category;
 use App\Models\Collaboration;
+use App\Models\DeliverableType;
 use App\Models\Message;
+use App\Models\Platform;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -90,6 +92,50 @@ class ChatReadTrackingTest extends TestCase
 
         $this->postJson("/api/collaborations/{$collaboration->id}/read")
             ->assertForbidden();
+    }
+
+    public function test_collaboration_show_returns_platform_deliverables(): void
+    {
+        [, $creator, $collaboration] = $this->createCollaboration();
+        $platform = Platform::create(['name' => 'Instagram']);
+        $deliverable = DeliverableType::create([
+            'platform_id' => $platform->id,
+            'name' => 'Story',
+        ]);
+        $collaboration->announcement->platforms()->attach($platform->id);
+        $collaboration->announcement->deliverables()->attach($deliverable->id, [
+            'quantity' => 2,
+        ]);
+
+        $this->actingAs($creator);
+
+        $this->getJson("/api/collaborations/{$collaboration->id}")
+            ->assertOk()
+            ->assertJsonPath('announcement.platforms.0.name', 'Instagram')
+            ->assertJsonPath('announcement.deliverables.0.name', 'Story')
+            ->assertJsonPath('announcement.deliverables.0.pivot.quantity', 2);
+    }
+
+    public function test_creator_cannot_submit_unrequested_deliverable(): void
+    {
+        [, $creator, $collaboration] = $this->createCollaboration();
+        $platform = Platform::create(['name' => 'TikTok']);
+        $unrequestedDeliverable = DeliverableType::create([
+            'platform_id' => $platform->id,
+            'name' => 'Video',
+        ]);
+
+        $this->actingAs($creator);
+
+        $this->postJson("/api/collaborations/{$collaboration->id}/submissions", [
+            'deliverable_type_id' => $unrequestedDeliverable->id,
+            'url' => 'https://example.com/video',
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath(
+                'message',
+                "Ce livrable n'est pas demandé pour cette collaboration."
+            );
     }
 
     private function createCollaboration(): array

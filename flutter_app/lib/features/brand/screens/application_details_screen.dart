@@ -185,12 +185,14 @@ class _BrandApplicationDetailsScreenState
                       'Envoyée le ${_formatDate(application.createdAt)}',
                     ),
                     _creatorProfile(application.user),
-                    const SizedBox(height: 24),
-                    _actions(application),
                   ],
                 ),
               ),
             ),
+      bottomNavigationBar:
+          application == null || _isLoading || !_hasActions(application)
+          ? null
+          : _actions(application),
     );
   }
 
@@ -361,84 +363,113 @@ class _BrandApplicationDetailsScreenState
     );
   }
 
+  bool _hasActions(Application application) {
+    return (application.status == 'accepted' &&
+            application.collaboration != null) ||
+        application.status == 'pending';
+  }
+
   Widget _actions(Application application) {
-    if (application.status == 'accepted' && application.collaboration != null) {
-      return SizedBox(
-        width: double.infinity,
-        height: 50,
-        child: ElevatedButton.icon(
-          onPressed: () => context.push(
-            '/brand/collaboration/${application.collaboration!.id}',
-          ),
-          icon: const Icon(Icons.work_outline, color: Colors.white),
-          label: Text(
-            'Ouvrir la collaboration',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-          ),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: const Border(
+          top: BorderSide(color: AppColors.border, width: 0.5),
         ),
-      );
-    }
-
-    if (application.status != 'pending') return const SizedBox.shrink();
-
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: _isUpdating ? null : () => _updateStatus('rejected'),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.error),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            child: Text(
-              'Refuser',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w700,
-                color: AppColors.error,
-              ),
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadowColor.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, -4),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: _isUpdating ? null : () => _updateStatus('accepted'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            child: _isUpdating
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : Text(
-                    'Accepter',
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        child:
+            application.status == 'accepted' &&
+                application.collaboration != null
+            ? SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: () => context.push(
+                    '/brand/collaboration/${application.collaboration!.id}',
+                  ),
+                  icon: const Icon(Icons.work_outline, color: Colors.white),
+                  label: Text(
+                    'Ouvrir la collaboration',
                     style: GoogleFonts.inter(fontWeight: FontWeight.w700),
                   ),
-          ),
-        ),
-      ],
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              )
+            : Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _isUpdating
+                          ? null
+                          : () => _updateStatus('rejected'),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.error),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Text(
+                        'Refuser',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.error,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isUpdating
+                          ? null
+                          : () => _updateStatus('accepted'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: _isUpdating
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              'Accepter',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
