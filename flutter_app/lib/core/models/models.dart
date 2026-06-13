@@ -20,6 +20,21 @@ bool boolFromJson(dynamic value) {
   return false;
 }
 
+int intFromJson(dynamic value, {int fallback = 0}) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? fallback;
+  return fallback;
+}
+
+int? nullableIntFromJson(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value);
+  return null;
+}
+
 // ─── User ────────────────────────────────────────────────────
 
 class User {
@@ -58,7 +73,7 @@ class User {
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'] as int,
+      id: intFromJson(json['id']),
       email: json['email'] as String,
       type: userTypeFromString(json['type'] as String),
       createdAt: json['created_at'] as String,
@@ -124,8 +139,8 @@ class BrandProfile {
 
   factory BrandProfile.fromJson(Map<String, dynamic> json) {
     return BrandProfile(
-      id: json['id'] as int,
-      userId: json['user_id'] as int,
+      id: intFromJson(json['id']),
+      userId: intFromJson(json['user_id']),
       name: json['name'] as String? ?? '',
       phone: json['phone'] as String? ?? '',
       location: json['location'] as String? ?? '',
@@ -176,8 +191,8 @@ class CreatorProfile {
 
   factory CreatorProfile.fromJson(Map<String, dynamic> json) {
     return CreatorProfile(
-      id: json['id'] as int,
-      userId: json['user_id'] as int,
+      id: intFromJson(json['id']),
+      userId: intFromJson(json['user_id']),
       firstName: json['first_name'] as String? ?? '',
       lastName: json['last_name'] as String? ?? '',
       nickname: json['nickname'] as String?,
@@ -215,7 +230,7 @@ class SocialLink {
   });
 
   factory SocialLink.fromJson(Map<String, dynamic> json) => SocialLink(
-    id: json['id'] as int,
+    id: intFromJson(json['id']),
     platform: json['platform'] as String? ?? '',
     url: json['url'] as String? ?? '',
     isVerified: boolFromJson(json['is_verified']),
@@ -239,7 +254,7 @@ class Category {
   Category({required this.id, required this.name, this.description});
 
   factory Category.fromJson(Map<String, dynamic> json) => Category(
-    id: json['id'] as int,
+    id: intFromJson(json['id']),
     name: json['name'] as String,
     description: json['description'] as String?,
   );
@@ -259,7 +274,7 @@ class Industry {
   Industry({required this.id, required this.name, this.description});
 
   factory Industry.fromJson(Map<String, dynamic> json) => Industry(
-    id: json['id'] as int,
+    id: intFromJson(json['id']),
     name: json['name'] as String,
     description: json['description'] as String?,
   );
@@ -281,7 +296,7 @@ class PlatformModel {
   PlatformModel({required this.id, required this.name, this.iconName});
 
   factory PlatformModel.fromJson(Map<String, dynamic> json) => PlatformModel(
-    id: json['id'] as int,
+    id: intFromJson(json['id']),
     name: json['name'] as String,
     iconName: json['icon_name'] as String?,
   );
@@ -308,10 +323,10 @@ class DeliverableType {
 
   factory DeliverableType.fromJson(Map<String, dynamic> json) =>
       DeliverableType(
-        id: json['id'] as int,
+        id: intFromJson(json['id']),
         name: json['name'] as String,
         iconName: json['icon_name'] as String?,
-        platformId: json['platform_id'] as int,
+        platformId: intFromJson(json['platform_id']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -336,10 +351,10 @@ class InfluencerTier {
   });
 
   factory InfluencerTier.fromJson(Map<String, dynamic> json) => InfluencerTier(
-    id: json['id'] as int,
+    id: intFromJson(json['id']),
     name: json['name'] as String,
-    minFollowers: json['min_followers'] as int?,
-    maxFollowers: json['max_followers'] as int?,
+    minFollowers: nullableIntFromJson(json['min_followers']),
+    maxFollowers: nullableIntFromJson(json['max_followers']),
   );
 
   Map<String, dynamic> toJson() => {
@@ -411,26 +426,20 @@ class Announcement {
 
   factory Announcement.fromJson(Map<String, dynamic> json) {
     return Announcement(
-      id: json['id'] as int,
+      id: intFromJson(json['id']),
       title: json['title'] as String,
       description: json['description'] as String,
-      influencerTierId: json['influencer_tier_id'] != null
-          ? int.tryParse(json['influencer_tier_id'].toString())
-          : null,
+      influencerTierId: nullableIntFromJson(json['influencer_tier_id']),
       thumbnail: json['thumbnail'] as String?,
       attachment: json['attachment'] as String?,
       budgetMin: double.tryParse(json['budget_min'].toString()) ?? 0.0,
       budgetMax: double.tryParse(json['budget_max'].toString()) ?? 0.0,
       deadline: json['deadline'] as String,
       deliveryDate: json['delivery_date'] as String?,
-      duration: json['duration'] != null
-          ? int.tryParse(json['duration'].toString())
-          : null,
+      duration: nullableIntFromJson(json['duration']),
       targetAudience: json['target_audience'] as String?,
       requirements: json['requirements'] as String?,
-      minFollowers: json['min_followers'] != null
-          ? int.tryParse(json['min_followers'].toString())
-          : null,
+      minFollowers: nullableIntFromJson(json['min_followers']),
       status: json['status'] as String? ?? 'open',
       createdAt: json['created_at'] as String,
       category: json['category'] != null
@@ -446,18 +455,16 @@ class Announcement {
           ? InfluencerTier.fromJson(json['influencer_tier'])
           : null,
       user: json['user'] != null ? User.fromJson(json['user']) : null,
-      applicationsCount: json['applications_count'] != null
-          ? int.tryParse(json['applications_count'].toString())
-          : null,
-      applicationsPendingCount: json['applications_pending_count'] != null
-          ? int.tryParse(json['applications_pending_count'].toString())
-          : null,
-      applicationsAcceptedCount: json['applications_accepted_count'] != null
-          ? int.tryParse(json['applications_accepted_count'].toString())
-          : null,
-      applicationsRejectedCount: json['applications_rejected_count'] != null
-          ? int.tryParse(json['applications_rejected_count'].toString())
-          : null,
+      applicationsCount: nullableIntFromJson(json['applications_count']),
+      applicationsPendingCount: nullableIntFromJson(
+        json['applications_pending_count'],
+      ),
+      applicationsAcceptedCount: nullableIntFromJson(
+        json['applications_accepted_count'],
+      ),
+      applicationsRejectedCount: nullableIntFromJson(
+        json['applications_rejected_count'],
+      ),
       currentUserApplication: json['current_user_application'] != null
           ? Application.fromJson(json['current_user_application'])
           : null,
@@ -507,14 +514,12 @@ class DeliverableWithPivot {
 
   factory DeliverableWithPivot.fromJson(Map<String, dynamic> json) =>
       DeliverableWithPivot(
-        id: json['id'] != null ? int.tryParse(json['id'].toString()) ?? 0 : 0,
+        id: intFromJson(json['id']),
         name: json['name'] as String,
         iconName: json['icon_name'] as String?,
-        platformId: json['platform_id'] != null
-            ? int.tryParse(json['platform_id'].toString()) ?? 0
-            : 0,
+        platformId: intFromJson(json['platform_id']),
         quantity: json['pivot']?['quantity'] != null
-            ? int.tryParse(json['pivot']!['quantity'].toString()) ?? 1
+            ? intFromJson(json['pivot']!['quantity'], fallback: 1)
             : 1,
       );
 }
@@ -549,9 +554,9 @@ class Application {
   });
 
   factory Application.fromJson(Map<String, dynamic> json) => Application(
-    id: json['id'] as int,
-    announcementId: json['announcement_id'] as int,
-    userId: json['user_id'] as int,
+    id: intFromJson(json['id']),
+    announcementId: intFromJson(json['announcement_id']),
+    userId: intFromJson(json['user_id']),
     message: json['message'] as String,
     proposedBudget: double.tryParse(json['proposed_budget'].toString()) ?? 0.0,
     status: json['status'] as String,
@@ -602,9 +607,9 @@ class Message {
   });
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
-    id: json['id'] as int,
-    collaborationId: json['collaboration_id'] as int,
-    senderId: json['sender_id'] as int,
+    id: intFromJson(json['id']),
+    collaborationId: intFromJson(json['collaboration_id']),
+    senderId: intFromJson(json['sender_id']),
     content: json['content'] as String?,
     attachment: json['attachment'] as String?,
     isRead: boolFromJson(json['is_read']),
@@ -648,9 +653,9 @@ class DeliverableSubmission {
 
   factory DeliverableSubmission.fromJson(Map<String, dynamic> json) =>
       DeliverableSubmission(
-        id: json['id'] as int,
-        collaborationId: json['collaboration_id'] as int,
-        deliverableTypeId: json['deliverable_type_id'] as int,
+        id: intFromJson(json['id']),
+        collaborationId: intFromJson(json['collaboration_id']),
+        deliverableTypeId: intFromJson(json['deliverable_type_id']),
         url: json['url'] as String?,
         attachment: json['attachment'] as String?,
         status: json['status'] as String,
@@ -711,11 +716,11 @@ class Collaboration {
   });
 
   factory Collaboration.fromJson(Map<String, dynamic> json) => Collaboration(
-    id: json['id'] as int,
-    applicationId: json['application_id'] as int,
-    announcementId: json['announcement_id'] as int,
-    brandId: json['brand_id'] as int,
-    creatorId: json['creator_id'] as int,
+    id: intFromJson(json['id']),
+    applicationId: intFromJson(json['application_id']),
+    announcementId: intFromJson(json['announcement_id']),
+    brandId: intFromJson(json['brand_id']),
+    creatorId: intFromJson(json['creator_id']),
     status: json['status'] as String,
     startedAt: json['started_at'] as String,
     completedAt: json['completed_at'] as String?,
@@ -724,7 +729,7 @@ class Collaboration {
     creatorLastSeenAt: json['creator_last_seen_at'] as String?,
     brandLastReadAt: json['brand_last_read_at'] as String?,
     creatorLastReadAt: json['creator_last_read_at'] as String?,
-    unreadCount: json['unread_count'] as int?,
+    unreadCount: nullableIntFromJson(json['unread_count']),
     announcement: json['announcement'] != null
         ? Announcement.fromJson(json['announcement'])
         : null,
@@ -841,8 +846,8 @@ class AppNotification {
 
   factory AppNotification.fromJson(Map<String, dynamic> json) =>
       AppNotification(
-        id: json['id'] as int,
-        userId: json['user_id'] as int,
+        id: intFromJson(json['id']),
+        userId: intFromJson(json['user_id']),
         type: json['type'] as String,
         title: json['title'] as String,
         body: json['body'] as String,
@@ -871,9 +876,9 @@ class NotificationsResponse {
         data: (json['data'] as List<dynamic>)
             .map((e) => AppNotification.fromJson(e))
             .toList(),
-        currentPage: json['current_page'] as int,
-        lastPage: json['last_page'] as int,
-        total: json['total'] as int,
+        currentPage: intFromJson(json['current_page']),
+        lastPage: intFromJson(json['last_page']),
+        total: intFromJson(json['total']),
       );
 }
 

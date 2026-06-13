@@ -655,154 +655,33 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
   }
 
   Widget _buildDeliverablesTab() {
+    final announcement = _collab?.announcement;
     final subs = _collab?.submissions ?? [];
+    final bottomSafeArea = MediaQuery.of(context).padding.bottom;
+    final bottomPadding = bottomSafeArea + (_isCollaborationLocked ? 16 : 104);
+
     return Stack(
       children: [
-        if (subs.isEmpty)
-          Center(
-            child: Text(
-              'Aucun livrable soumis pour le moment',
-              style: GoogleFonts.inter(color: AppColors.textSecondary),
-            ),
-          )
-        else
-          ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: subs.length,
-            itemBuilder: (context, i) {
-              final sub = subs[i];
-              final typeName =
-                  sub.deliverableType?.name ?? 'Livrable #${sub.id}';
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          typeName,
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.text,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: sub.status == 'approved'
-                                ? AppColors.success.withValues(alpha: 0.1)
-                                : sub.status == 'rejected'
-                                ? AppColors.error.withValues(alpha: 0.1)
-                                : AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            sub.status.toUpperCase(),
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: sub.status == 'approved'
-                                  ? AppColors.success
-                                  : sub.status == 'rejected'
-                                  ? AppColors.error
-                                  : AppColors.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (sub.url != null && sub.url!.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      InkWell(
-                        onTap: () => launchUrl(Uri.parse(sub.url!)),
-                        child: Text(
-                          sub.url!,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: AppColors.primary,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (sub.attachment != null &&
-                        sub.attachment!.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      InkWell(
-                        onTap: () => launchUrl(Uri.parse(sub.attachment!)),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.attach_file,
-                              size: 16,
-                              color: AppColors.primary,
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                'Voir la pièce jointe',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  color: AppColors.primary,
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    if (sub.feedback != null && sub.feedback!.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Retour de la marque:",
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              sub.feedback!,
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: AppColors.text,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            },
-          ),
+        ListView(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
+          children: [
+            if (announcement != null &&
+                ((announcement.platforms ?? []).isNotEmpty ||
+                    (announcement.deliverables ?? []).isNotEmpty)) ...[
+              _deliverablesHeading('Livrables requis'),
+              _requiredDeliverables(announcement),
+              const SizedBox(height: 20),
+            ],
+            _deliverablesHeading('Livrables soumis'),
+            if (subs.isEmpty)
+              _emptySubmissionsCard()
+            else
+              ...subs.map(_submissionCard),
+          ],
+        ),
         if (!_isCollaborationLocked)
           Positioned(
-            bottom: 16,
+            bottom: bottomSafeArea + 16,
             right: 16,
             child: FloatingActionButton.extended(
               onPressed: _showSubmitDeliverableModal,
@@ -818,6 +697,297 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _deliverablesHeading(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        title,
+        style: GoogleFonts.inter(
+          fontSize: 16,
+          fontWeight: FontWeight.w800,
+          color: AppColors.text,
+        ),
+      ),
+    );
+  }
+
+  Widget _emptySubmissionsCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: Text(
+        'Aucun livrable soumis pour le moment',
+        style: GoogleFonts.inter(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+
+  Widget _requiredDeliverables(Announcement announcement) {
+    final platforms = announcement.platforms ?? const <PlatformModel>[];
+    final deliverables =
+        announcement.deliverables ?? const <DeliverableWithPivot>[];
+
+    if (deliverables.isEmpty) {
+      return _emptyRequiredDeliverablesCard();
+    }
+
+    final platformBlocks = platforms
+        .map((platform) {
+          final items = deliverables
+              .where((deliverable) => deliverable.platformId == platform.id)
+              .toList();
+          return _deliverablePlatformBlock(platform.name, items);
+        })
+        .whereType<Widget>()
+        .toList();
+
+    final orphanDeliverables = deliverables
+        .where(
+          (deliverable) => !platforms.any(
+            (platform) => platform.id == deliverable.platformId,
+          ),
+        )
+        .toList();
+    if (orphanDeliverables.isNotEmpty) {
+      final block = _deliverablePlatformBlock('Autres', orphanDeliverables);
+      if (block != null) platformBlocks.add(block);
+    }
+
+    if (platformBlocks.isEmpty) {
+      final block = _deliverablePlatformBlock('Livrables', deliverables);
+      if (block != null) platformBlocks.add(block);
+    }
+
+    return Column(children: platformBlocks);
+  }
+
+  Widget _emptyRequiredDeliverablesCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: Text(
+        'Aucun livrable spécifique renseigné.',
+        style: GoogleFonts.inter(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+
+  Widget? _deliverablePlatformBlock(
+    String platformName,
+    List<DeliverableWithPivot> deliverables,
+  ) {
+    if (deliverables.isEmpty) return null;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.public_outlined,
+                size: 17,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  platformName,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...deliverables.map(
+            (deliverable) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle_outline,
+                    size: 16,
+                    color: AppColors.success,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${deliverable.quantity} x ${deliverable.name}',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _submissionCard(DeliverableSubmission sub) {
+    final typeName = sub.deliverableType?.name ?? 'Livrable #${sub.id}';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  typeName,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.text,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              _submissionStatus(sub.status),
+            ],
+          ),
+          if (sub.url != null && sub.url!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () => launchUrl(Uri.parse(sub.url!)),
+              child: Text(
+                sub.url!,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppColors.primary,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ],
+          if (sub.attachment != null && sub.attachment!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () => launchUrl(Uri.parse(sub.attachment!)),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.attach_file,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Voir la pièce jointe',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: AppColors.primary,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (sub.feedback != null && sub.feedback!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Retour de la marque:",
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    sub.feedback!,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: AppColors.text,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _submissionStatus(String status) {
+    final color = status == 'approved'
+        ? AppColors.success
+        : status == 'rejected'
+        ? AppColors.error
+        : AppColors.primary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: GoogleFonts.inter(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
     );
   }
 
@@ -904,6 +1074,7 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -912,14 +1083,17 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final currentDeliverables = visibleDeliverables();
+            final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+            final bottomSafeArea = MediaQuery.of(context).padding.bottom;
             return SafeArea(
               top: false,
+              bottom: false,
               child: SingleChildScrollView(
                 padding: EdgeInsets.fromLTRB(
                   24,
                   24,
                   24,
-                  MediaQuery.of(context).viewInsets.bottom + 18,
+                  bottomInset + bottomSafeArea + 28,
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

@@ -147,6 +147,12 @@ class _CreatorApplicationDetailsScreenState
                         Icons.event_outlined,
                         'Deadline ${_formatDate(announcement.deadline)}',
                       ),
+                      if ((announcement.platforms ?? []).isNotEmpty ||
+                          (announcement.deliverables ?? []).isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        _sectionTitle('Livrables requis'),
+                        _requiredDeliverables(announcement),
+                      ],
                     ],
                     const SizedBox(height: 20),
                     _sectionTitle('Votre message'),
@@ -323,6 +329,113 @@ class _CreatorApplicationDetailsScreenState
           height: 1.5,
           color: AppColors.textSecondary,
         ),
+      ),
+    );
+  }
+
+  Widget _requiredDeliverables(Announcement announcement) {
+    final platforms = announcement.platforms ?? const <PlatformModel>[];
+    final deliverables =
+        announcement.deliverables ?? const <DeliverableWithPivot>[];
+
+    if (deliverables.isEmpty) {
+      return _bodyCard('Aucun livrable spécifique renseigné.');
+    }
+
+    final platformBlocks = platforms
+        .map((platform) {
+          final items = deliverables
+              .where((deliverable) => deliverable.platformId == platform.id)
+              .toList();
+          return _deliverablePlatformBlock(platform.name, items);
+        })
+        .whereType<Widget>()
+        .toList();
+
+    final orphanDeliverables = deliverables
+        .where(
+          (deliverable) => !platforms.any(
+            (platform) => platform.id == deliverable.platformId,
+          ),
+        )
+        .toList();
+    if (orphanDeliverables.isNotEmpty) {
+      final block = _deliverablePlatformBlock('Autres', orphanDeliverables);
+      if (block != null) platformBlocks.add(block);
+    }
+
+    if (platformBlocks.isEmpty) {
+      final block = _deliverablePlatformBlock('Livrables', deliverables);
+      if (block != null) platformBlocks.add(block);
+    }
+
+    return Column(children: platformBlocks);
+  }
+
+  Widget? _deliverablePlatformBlock(
+    String platformName,
+    List<DeliverableWithPivot> deliverables,
+  ) {
+    if (deliverables.isEmpty) return null;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.public_outlined,
+                size: 17,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  platformName,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...deliverables.map(
+            (deliverable) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle_outline,
+                    size: 16,
+                    color: AppColors.success,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${deliverable.quantity} x ${deliverable.name}',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

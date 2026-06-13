@@ -35,6 +35,40 @@ void main() {
     expect(message.isRead, isTrue);
   });
 
+  test('parses string ids in deliverable payloads safely', () {
+    final submission = DeliverableSubmission.fromJson({
+      'id': '9',
+      'collaboration_id': '4',
+      'deliverable_type_id': '12',
+      'url': 'https://example.com/video',
+      'attachment': null,
+      'status': 'submitted',
+      'feedback': null,
+      'created_at': '2026-06-12T00:00:00.000000Z',
+      'deliverable_type': {
+        'id': '12',
+        'name': 'Story',
+        'icon_name': null,
+        'platform_id': '3',
+      },
+    });
+    final deliverable = DeliverableWithPivot.fromJson({
+      'id': '12',
+      'name': 'Story',
+      'icon_name': null,
+      'platform_id': '3',
+      'pivot': {'quantity': '2'},
+    });
+
+    expect(submission.id, 9);
+    expect(submission.collaborationId, 4);
+    expect(submission.deliverableTypeId, 12);
+    expect(submission.deliverableType?.platformId, 3);
+    expect(deliverable.id, 12);
+    expect(deliverable.platformId, 3);
+    expect(deliverable.quantity, 2);
+  });
+
   testWidgets('renders login screen when unauthenticated', (tester) async {
     await tester.pumpWidget(const MyApp());
     await tester.pump();

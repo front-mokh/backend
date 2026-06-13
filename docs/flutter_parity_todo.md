@@ -35,6 +35,9 @@
 - Implemented Brand Creators discovery, Brand Edit Announcement, Creator Application Details, and fixed Brand Application Details.
 - Added search/filter/count headers to brand announcements, creator announcements, creator applications, and brand/creator collaboration inboxes.
 - Added collaboration details tabs, brand complete-collaboration action, and completed/cancelled locked states.
+- Hardened Flutter model parsing so Laravel numeric IDs/counts are accepted as either integers or strings.
+- Added required deliverables by platform to brand/creator candidature detail views and the creator collaboration deliverables tab.
+- Fixed Android bottom safe-area spacing for the creator deliverable submit action and modal submit button.
 
 ## Missing Or Stubbed Flutter Pages
 
@@ -115,6 +118,8 @@
 
 ## Current Verification
 
-- `php artisan test`: passing, 31 tests / 100 assertions.
-- `flutter analyze`: passing with no issues.
-- `flutter test`: passing.
+- Latest Flutter pass, 2026-06-13:
+  - `flutter analyze`: passing with no issues.
+  - `flutter test`: passing.
+  - `flutter build apk --release`: passing.
+- Backend unchanged in latest pass; last known `php artisan test`: passing, 31 tests / 100 assertions.
