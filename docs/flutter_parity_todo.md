@@ -47,6 +47,7 @@
 - Added richer attachment previews for images, PDFs, videos, and generic files in chat, announcement details, and deliverable details.
 - Added pre-upload size validation for onboarding images, announcement thumbnails/PDFs, chat attachments, and deliverable submission attachments.
 - Added user-visible realtime reconnection feedback in the brand and creator Flutter shells.
+- Added robust no-cost Firebase Cloud Messaging push infrastructure for Flutter: backend device-token table, token registration/removal endpoints, FCM HTTP v1 sender, Flutter token sync, foreground notifications, tap route mapping, and Android notification permission/channel setup.
 
 ## Missing Or Stubbed Flutter Pages
 
@@ -91,8 +92,11 @@
 - Add "delete all notifications" if backend supports it, or add backend endpoint first.
 - Add notification deep-link coverage for every backend notification route.
 - Decide push strategy for Flutter:
-  - Replace or extend Expo push token backend flow with Firebase Cloud Messaging for Flutter.
-  - Add device token registration, refresh, logout cleanup, and push payload route mapping.
+  - [x] Replace or extend Expo push token backend flow with Firebase Cloud Messaging for Flutter.
+  - [x] Add device token registration, refresh, logout cleanup, and push payload route mapping.
+  - Add Firebase project credentials to Flutter `.env` and Laravel/VPS environment.
+  - Configure iOS APNs key/capability in Firebase/Apple before iOS push release.
+  - Manually test foreground, background, terminated-app, and notification-tap flows on Android/iOS.
 
 ## Priority 3: UX And Mobile Polish
 
@@ -128,9 +132,9 @@
 ## Current Verification
 
 - Latest full pass, 2026-06-13:
-  - `php artisan test`: passing, 40 tests / 139 assertions.
+  - `php artisan test`: passing, 44 tests / 160 assertions.
   - `flutter analyze`: passing with no issues.
   - `flutter test`: passing.
-- Latest APK build after Priority 3 polish pass, 2026-06-13:
+- Latest APK build after FCM push implementation, 2026-06-13:
   - `flutter build apk --release`: passing.
   - Test APK copied to `celibrity_flutter_test.apk`.

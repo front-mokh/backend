@@ -1,6 +1,6 @@
 # Flutter Progress Tracker
 
-Last updated: 2026-06-12
+Last updated: 2026-06-13
 
 Use this file as the quick handoff between sessions. The detailed roadmap lives in `docs/flutter_parity_todo.md`.
 
@@ -20,9 +20,10 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - Brand announcement creation now refreshes the announcement list immediately after a successful publish.
 - Brand and creator profile tabs now refresh profile data on open and no longer render a duplicate inner "Profil" app bar.
 - Priority 1 Flutter parity now covers creator discovery, announcement editing, application details, collaboration summary/status tabs, and search/filter headers on the main list screens.
+- Flutter push notifications now use a Firebase Cloud Messaging path with backend device-token registration, token refresh/logout cleanup, foreground local notifications, and push tap route mapping.
+- FCM code is implemented but real phone push still needs Firebase project credentials in Flutter `.env` and Laravel/VPS env before live delivery.
 - Backend and Flutter quality checks are green.
 - React Native app in `react_native_app/mobile` remains the feature reference for parity.
-- `flutter_app/` is currently untracked in git, so remember to include it intentionally when committing.
 
 ## Completed
 
@@ -76,6 +77,11 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - [x] Added search/filter/count headers to brand announcements, creator announcements, creator applications, and both collaboration inboxes.
 - [x] Added collaboration details tabs for brand and creator.
 - [x] Added visible brand action to complete a collaboration and locked UI states for completed/cancelled collaborations.
+- [x] Added Flutter/Laravel Firebase Cloud Messaging infrastructure for Android/iOS push notifications.
+- [x] Added `push_device_tokens` persistence with hashed token lookup and multi-device support.
+- [x] Added `/api/push-tokens` register/delete endpoints plus legacy Expo endpoint compatibility.
+- [x] Added Flutter token registration on login/session restore, token cleanup on logout, foreground notification display, and notification tap deep-link handling.
+- [x] Added backend feature tests for push-token registration, validation, deletion, and legacy Expo compatibility.
 
 ## Missing Or Stubbed Flutter Screens
 
@@ -91,22 +97,25 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 
 ## Verified
 
-- [x] `php artisan test` passes: 31 tests, 100 assertions.
+- [x] `php artisan test` passes: 44 tests, 160 assertions.
 - [x] `flutter analyze` passes with no issues.
 - [x] `flutter test` passes.
+- [x] `flutter build apk --release` passes after FCM dependencies.
 
 ## Next Session: Start Here
 
-1. Add advanced creator announcement filters for budget, tier, and deadline.
-2. Add explicit brand announcement sort controls.
-3. Add brand-side status filtering inside announcement application lists.
-4. Manually test Priority 1 flows on Android against the VPS: creator discovery, edit announcement, application accept/reject, open collaboration, complete collaboration.
+1. Create/configure a Firebase project and add Flutter Firebase values to `flutter_app/.env`.
+2. Add Laravel/VPS FCM credentials: `FCM_PROJECT_ID` plus `FCM_SERVICE_ACCOUNT_JSON` or `FCM_SERVICE_ACCOUNT_PATH`.
+3. Run the new migration on the VPS: `php artisan migrate --force`.
+4. Manually test push notifications on Android: foreground, background, terminated app, and tap-to-open route.
+5. Configure Apple APNs key/capability in Firebase before testing iOS push.
 
 ## Known Risks / Watch Items
 
 - Manual device testing is still needed against the live Reverb server to confirm environment values, TLS/port access, and mobile network behavior.
-- Flutter push notifications still need a proper Firebase Cloud Messaging strategy; backend push flow appears Expo-oriented.
-- Notification route mapping covers the known routes from this pass, but every backend notification type still needs a full audit.
+- FCM delivery cannot be proven until Firebase project credentials are added to Flutter and the VPS backend.
+- iOS push needs Apple APNs key/capability configured in Firebase; FCM itself is no-cost, but Apple distribution/testing may require the normal Apple developer setup.
+- Notification route mapping covers the known routes from this pass, but every backend notification type still needs real-device tap testing.
 - Backend feature tests should still be added for announcement creation permissions and collaboration completion permissions.
 - New `/api/creators` endpoint is intentionally brand-only and returns the first 100 onboarded creators; pagination can be added when creator volume grows.
 
@@ -115,14 +124,17 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - Expected new/changed files from this pass include:
   - `docs/flutter_parity_todo.md`
   - `docs/flutter_progress_tracker.md`
-  - `app/Http/Controllers/Api/AnnouncementController.php`
-  - `app/Http/Controllers/Api/CollaborationController.php`
-  - `app/Events/MessageReadEvent.php`
-  - `tests/Feature/ChatReadTrackingTest.php`
-  - `flutter_app/`
+  - `app/Http/Controllers/Api/NotificationController.php`
+  - `app/Models/PushDeviceToken.php`
+  - `app/Services/FcmPushService.php`
+  - `app/Services/NotificationService.php`
+  - `database/migrations/2026_06_13_000001_create_push_device_tokens_table.php`
+  - `tests/Feature/PushDeviceTokenTest.php`
+  - `flutter_app/lib/core/services/push_notification_service.dart`
 - Existing unrelated or pre-existing worktree items seen during this pass:
   - `eas.json`
   - `app.json`
+  - `celibrity_flutter_test.apk`
   - `react_native_app/mobile`
 
 ## Resume Checklist

@@ -4,12 +4,14 @@ import 'package:provider/provider.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/providers/onboarding_provider.dart';
 import 'core/routing/app_router.dart';
+import 'core/services/push_notification_service.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env', isOptional: true);
+  await PushNotificationService.instance.initialize();
   runApp(const MyApp());
 }
 
@@ -25,7 +27,14 @@ class _MyAppState extends State<MyApp> {
   late final _router = AppRouter.router(_authProvider);
 
   @override
+  void initState() {
+    super.initState();
+    PushNotificationService.instance.attachRouter(_router);
+  }
+
+  @override
   void dispose() {
+    PushNotificationService.instance.dispose();
     _authProvider.dispose();
     super.dispose();
   }

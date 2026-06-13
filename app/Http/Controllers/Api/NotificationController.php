@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AppNotification;
+use App\Models\PushDeviceToken;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class NotificationController extends Controller
 {
@@ -58,19 +60,84 @@ class NotificationController extends Controller
         return response()->json(['message' => 'All notifications marked as read']);
     }
 
+    public function storeDeviceToken(Request $request)
+    {
+        $validated = $request->validate([
+            'token' => 'required|string|max:4096',
+            'provider' => ['nullable', Rule::in(['fcm', 'expo'])],
+            'platform' => ['nullable', Rule::in(['android', 'ios', 'web', 'macos', 'windows', 'linux', 'unknown'])],
+            'device_id' => 'nullable|string|max:255',
+            'app_version' => 'nullable|string|max:50',
+        ]);
+
+        $deviceToken = $this->upsertDeviceToken(
+            $request,
+            $validated['provider'] ?? 'fcm',
+            $validated
+        );
+
+        return response()->json([
+            'message' => 'Push token registered',
+            'device_token' => [
+                'id' => $deviceToken->id,
+                'provider' => $deviceToken->provider,
+                'platform' => $deviceToken->platform,
+                'last_used_at' => $deviceToken->last_used_at,
+            ],
+        ], $deviceToken->wasRecentlyCreated ? 201 : 200);
+    }
+
+    public function destroyDeviceToken(Request $request)
+    {
+        $validated = $request->validate([
+            'token' => 'required|string|max:4096',
+        ]);
+
+        $deleted = $request->user()
+            ->pushDeviceTokens()
+            ->where('token_hash', PushDeviceToken::hashToken($validated['token']))
+            ->delete();
+
+        return response()->json([
+            'message' => 'Push token removed',
+            'deleted' => $deleted > 0,
+        ]);
+    }
+
     /**
-     * Store/update the user's Expo Push Token
+     * Store/update the user's Expo Push Token for legacy clients.
      */
     public function storePushToken(Request $request)
     {
         $validated = $request->validate([
-            'token' => 'required|string',
+            'token' => 'required|string|max:4096',
+            'platform' => ['nullable', Rule::in(['android', 'ios', 'web', 'macos', 'windows', 'linux', 'unknown'])],
+            'device_id' => 'nullable|string|max:255',
+            'app_version' => 'nullable|string|max:50',
         ]);
 
+        $this->upsertDeviceToken($request, 'expo', $validated);
         $request->user()->update(['expo_push_token' => $validated['token']]);
 
         return response()->json(['message' => 'Push token registered']);
     }
+
+    private function upsertDeviceToken(Request $request, string $provider, array $validated): PushDeviceToken
+    {
+        return PushDeviceToken::updateOrCreate(
+            ['token_hash' => PushDeviceToken::hashToken($validated['token'])],
+            [
+                'user_id' => $request->user()->id,
+                'provider' => $provider,
+                'platform' => $validated['platform'] ?? null,
+                'device_id' => $validated['device_id'] ?? null,
+                'app_version' => $validated['app_version'] ?? null,
+                'token' => $validated['token'],
+                'last_used_at' => now(),
+            ]
+        );
+    }
+
     /**
      * Delete a single notification
      */

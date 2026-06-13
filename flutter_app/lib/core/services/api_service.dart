@@ -630,7 +630,26 @@ class ApiService {
     await _dio.delete('/notifications/all');
   }
 
-  Future<void> registerPushToken(String token) async {
-    await _dio.post('/user/expo-push-token', data: {'token': token});
+  Future<void> registerPushToken({
+    required String token,
+    String provider = 'fcm',
+    String? platform,
+    String? deviceId,
+    String? appVersion,
+  }) async {
+    await _dio.post(
+      '/push-tokens',
+      data: {
+        'token': token,
+        'provider': provider,
+        'platform': ?platform,
+        'device_id': ?deviceId,
+        'app_version': ?appVersion,
+      },
+    );
+  }
+
+  Future<void> deletePushToken(String token) async {
+    await _dio.delete('/push-tokens', data: {'token': token});
   }
 }

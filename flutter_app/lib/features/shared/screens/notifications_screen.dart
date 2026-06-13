@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/notification_route_mapper.dart';
 import '../../../core/widgets/app_state_widgets.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -50,39 +51,6 @@ class _State extends State<NotificationsScreen> {
     }
   }
 
-  String? _extractId(String route) {
-    final match = RegExp(r'/(\d+)(?:\?|$)').firstMatch(route);
-    return match?.group(1);
-  }
-
-  String? _paramId(AppNotification notification) {
-    final params = notification.data?['params'];
-    if (params is Map) return params['id']?.toString();
-    return null;
-  }
-
-  String? _flutterRouteFor(AppNotification notification) {
-    final route = notification.data?['route']?.toString();
-    if (route == null || route.isEmpty) return null;
-
-    if (route.contains('/brand/application-details/')) {
-      final id = _paramId(notification) ?? _extractId(route);
-      return id == null ? null : '/brand/application/$id';
-    }
-    if (route.contains('/brand/collaboration-details/')) {
-      final id = _paramId(notification) ?? _extractId(route);
-      return id == null ? null : '/brand/collaboration/$id';
-    }
-    if (route.contains('/creator/collaboration-details/')) {
-      final id = _paramId(notification) ?? _extractId(route);
-      return id == null ? null : '/creator/collaboration/$id';
-    }
-    if (route == '/creator/applications') return route;
-    if (route == '/brand/announcements') return route;
-
-    return route;
-  }
-
   Future<void> _handleNotificationTap(AppNotification notification) async {
     if (!notification.isRead) {
       await ApiService().markNotificationAsRead(notification.id);
@@ -100,7 +68,7 @@ class _State extends State<NotificationsScreen> {
       }
     }
 
-    final route = _flutterRouteFor(notification);
+    final route = NotificationRouteMapper.routeFor(notification.data ?? {});
     if (route != null && mounted) context.push(route);
   }
 

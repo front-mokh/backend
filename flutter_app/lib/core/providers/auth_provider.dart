@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../services/push_notification_service.dart';
 import '../services/storage_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -34,6 +35,7 @@ class AuthProvider extends ChangeNotifier {
 
         // Fetch the newest data before routing so onboarding state is not stale.
         await refreshUser();
+        await PushNotificationService.instance.syncToken();
       }
     } catch (e) {
       debugPrint('Failed to load auth: $e');
@@ -62,11 +64,13 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('Failed to refresh user data after login: $e');
     }
 
+    await PushNotificationService.instance.syncToken();
     notifyListeners();
   }
 
   Future<void> logout() async {
     try {
+      await PushNotificationService.instance.unregisterToken();
       await _api.logout();
     } catch (e) {
       debugPrint('Logout API call failed: $e');

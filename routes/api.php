@@ -1,10 +1,5 @@
 <?php
 
-use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\Auth\EmailVerificationNotificationController;
-use App\Http\Controllers\Auth\SignupController;
-use App\Http\Controllers\Auth\VerifyEmailController;
-use App\Http\Controllers\Onboarding\OnboardingController;
 use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\ApplicationController;
 use App\Http\Controllers\Api\CategoryController;
@@ -14,6 +9,11 @@ use App\Http\Controllers\Api\IndustryController;
 use App\Http\Controllers\Api\InfluencerTierController;
 use App\Http\Controllers\Api\PlatformController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Auth\EmailVerificationNotificationController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\SignupController;
+use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\Onboarding\OnboardingController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
@@ -86,5 +86,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
     Route::delete('/notifications/all', [\App\Http\Controllers\Api\NotificationController::class, 'destroyAll']);
     Route::delete('/notifications/{notification}', [\App\Http\Controllers\Api\NotificationController::class, 'destroy']);
+    Route::post('/push-tokens', [\App\Http\Controllers\Api\NotificationController::class, 'storeDeviceToken']);
+    Route::delete('/push-tokens', [\App\Http\Controllers\Api\NotificationController::class, 'destroyDeviceToken']);
     Route::post('/user/expo-push-token', [\App\Http\Controllers\Api\NotificationController::class, 'storePushToken']);
 });

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AppNotification;
+use App\Models\PushDeviceToken;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -28,10 +29,8 @@ class NotificationService
             'data' => $data,
         ]);
 
-        // 2. Send Expo Push Notification (if token exists)
-        if ($user->expo_push_token) {
-            static::sendExpoPush($user->expo_push_token, $title, $body, $data);
-        }
+        // 2. Send mobile push notification to registered devices.
+        static::sendPushToUser($user, $type, $title, $body, $data);
 
         // 3. Broadcast real-time event to connected WebSockets
         broadcast(new \App\Events\NewNotificationEvent($notification))->toOthers();
@@ -59,7 +58,7 @@ class NotificationService
                 'channelId' => 'default',
             ]);
         } catch (\Exception $e) {
-            Log::error('Expo push notification failed: ' . $e->getMessage());
+            Log::error('Expo push notification failed: '.$e->getMessage());
         }
     }
 
@@ -74,9 +73,39 @@ class NotificationService
         string $body,
         array $data = []
     ): void {
-        // Send Expo Push Notification (if token exists)
+        static::sendPushToUser(
+            $user,
+            (string) ($data['type'] ?? 'new_message'),
+            $title,
+            $body,
+            $data
+        );
+    }
+
+    protected static function sendPushToUser(
+        User $user,
+        string $type,
+        string $title,
+        string $body,
+        array $data = []
+    ): void {
+        $pushData = array_merge($data, ['type' => $type]);
+
+        $user->pushDeviceTokens()
+            ->get()
+            ->each(function (PushDeviceToken $deviceToken) use ($title, $body, $pushData) {
+                if ($deviceToken->provider === 'expo') {
+                    static::sendExpoPush($deviceToken->token, $title, $body, $pushData);
+
+                    return;
+                }
+
+                app(FcmPushService::class)->send($deviceToken, $title, $body, $pushData);
+            });
+
+        // Compatibility with the old React Native/Expo single-token column.
         if ($user->expo_push_token) {
-            static::sendExpoPush($user->expo_push_token, $title, $body, $data);
+            static::sendExpoPush($user->expo_push_token, $title, $body, $pushData);
         }
     }
 
