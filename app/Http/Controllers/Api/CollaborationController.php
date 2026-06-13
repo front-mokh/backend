@@ -390,8 +390,15 @@ class CollaborationController extends Controller
         ]);
 
         $collaboration->unread_count = $collaboration->unreadCountFor($user);
-        $collaboration->current_user_review = $collaboration->reviews
-            ->firstWhere('reviewer_id', $user->id);
+        $collaboration->current_user_review = $collaboration->reviews()
+            ->where('reviewer_id', $user->id)
+            ->with([
+                'reviewer.brandProfile',
+                'reviewer.creatorProfile',
+                'reviewedUser.brandProfile',
+                'reviewedUser.creatorProfile',
+            ])
+            ->first();
 
         if ($collaboration->brand) {
             $collaboration->brand->setAttribute(

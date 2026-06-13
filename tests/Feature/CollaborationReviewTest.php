@@ -157,9 +157,19 @@ class CollaborationReviewTest extends TestCase
         $this->getJson("/api/collaborations/{$collaboration->id}")
             ->assertOk()
             ->assertJsonCount(0, 'reviews')
-            ->assertJsonPath('current_user_review', null)
+            ->assertJsonPath('current_user_review.status', 'hidden')
+            ->assertJsonPath('current_user_review.rating', 5)
             ->assertJsonPath('creator.reputation_summary.average_rating', null)
             ->assertJsonPath('creator.reputation_summary.reviews_count', 0);
+
+        $this->actingAs($collaboration->creator);
+
+        $this->getJson("/api/collaborations/{$collaboration->id}")
+            ->assertOk()
+            ->assertJsonCount(0, 'reviews')
+            ->assertJsonPath('current_user_review', null);
+
+        $this->actingAs($brand);
 
         $this->getJson('/api/creators')
             ->assertOk()

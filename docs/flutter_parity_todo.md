@@ -51,6 +51,7 @@
 - Added cursor-paginated collaboration message history so Flutter opens chats on the latest messages and loads older messages only on request.
 - Added MVP collaboration reviews and initial internal reputation ranking: backend review table/API, one review per completed collaboration per participant, 1-5 global/category ratings, public comments, review notifications, reputation summaries, creator discovery ranking, Flutter completed-collaboration review prompts, and public review display.
 - Hardened review visibility so hidden reviews are excluded from mobile collaboration payloads and reputation summaries.
+- Re-evaluated review edge cases: current users now still receive their own hidden review state, duplicate-review race conditions return a clean validation response, and the Flutter review sheet cannot be dismissed mid-submit.
 
 ## Missing Or Stubbed Flutter Pages
 
@@ -200,7 +201,7 @@
 ## Current Verification
 
 - Latest full pass, 2026-06-13:
-  - `php artisan test`: passing, 53 tests / 209 assertions.
+  - `php artisan test`: passing, 53 tests / 213 assertions.
   - `flutter analyze`: passing with no issues.
   - `flutter test`: passing.
 - Latest APK build after MVP reviews/reputation, 2026-06-13:

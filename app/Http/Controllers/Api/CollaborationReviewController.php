@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Collaboration;
 use App\Models\CollaborationReview;
 use App\Services\NotificationService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -26,9 +27,7 @@ class CollaborationReviewController extends Controller
         }
 
         if ($collaboration->reviews()->where('reviewer_id', $user->id)->exists()) {
-            return response()->json([
-                'message' => 'Vous avez déjà laissé un avis pour cette collaboration.',
-            ], 422);
+            return $this->duplicateReviewResponse();
         }
 
         $validated = $request->validate([
@@ -46,20 +45,28 @@ class CollaborationReviewController extends Controller
             ? $collaboration->creator
             : $collaboration->brand;
 
-        $review = CollaborationReview::create([
-            'collaboration_id' => $collaboration->id,
-            'reviewer_id' => $user->id,
-            'reviewed_user_id' => $reviewedUser->id,
-            'reviewer_role' => $user->id === $collaboration->brand_id ? 'brand' : 'creator',
-            'rating' => $validated['rating'],
-            'communication_rating' => $validated['communication_rating'] ?? null,
-            'quality_rating' => $validated['quality_rating'] ?? null,
-            'reliability_rating' => $validated['reliability_rating'] ?? null,
-            'professionalism_rating' => $validated['professionalism_rating'] ?? null,
-            'would_work_again' => $validated['would_work_again'] ?? null,
-            'public_comment' => $validated['public_comment'] ?? null,
-            'status' => 'published',
-        ]);
+        try {
+            $review = CollaborationReview::create([
+                'collaboration_id' => $collaboration->id,
+                'reviewer_id' => $user->id,
+                'reviewed_user_id' => $reviewedUser->id,
+                'reviewer_role' => $user->id === $collaboration->brand_id ? 'brand' : 'creator',
+                'rating' => $validated['rating'],
+                'communication_rating' => $validated['communication_rating'] ?? null,
+                'quality_rating' => $validated['quality_rating'] ?? null,
+                'reliability_rating' => $validated['reliability_rating'] ?? null,
+                'professionalism_rating' => $validated['professionalism_rating'] ?? null,
+                'would_work_again' => $validated['would_work_again'] ?? null,
+                'public_comment' => $validated['public_comment'] ?? null,
+                'status' => 'published',
+            ]);
+        } catch (QueryException $exception) {
+            if ($this->isDuplicateReviewException($exception)) {
+                return $this->duplicateReviewResponse();
+            }
+
+            throw $exception;
+        }
 
         $routePrefix = $reviewedUser->isBrand() ? '/brand' : '/creator';
 
@@ -88,5 +95,17 @@ class CollaborationReviewController extends Controller
     private function isParticipant(Collaboration $collaboration, int $userId): bool
     {
         return $collaboration->brand_id === $userId || $collaboration->creator_id === $userId;
+    }
+
+    private function duplicateReviewResponse()
+    {
+        return response()->json([
+            'message' => 'Vous avez déjà laissé un avis pour cette collaboration.',
+        ], 422);
+    }
+
+    private function isDuplicateReviewException(QueryException $exception): bool
+    {
+        return in_array((string) $exception->getCode(), ['23000', '23505'], true);
     }
 }
