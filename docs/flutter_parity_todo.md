@@ -50,6 +50,7 @@
 - Added robust no-cost Firebase Cloud Messaging push infrastructure for Flutter: backend device-token table, token registration/removal endpoints, FCM HTTP v1 sender, Flutter token sync, foreground notifications, tap route mapping, and Android notification permission/channel setup.
 - Added cursor-paginated collaboration message history so Flutter opens chats on the latest messages and loads older messages only on request.
 - Added MVP collaboration reviews and initial internal reputation ranking: backend review table/API, one review per completed collaboration per participant, 1-5 global/category ratings, public comments, review notifications, reputation summaries, creator discovery ranking, Flutter completed-collaboration review prompts, and public review display.
+- Hardened review visibility so hidden reviews are excluded from mobile collaboration payloads and reputation summaries.
 
 ## Missing Or Stubbed Flutter Pages
 
@@ -199,7 +200,7 @@
 ## Current Verification
 
 - Latest full pass, 2026-06-13:
-  - `php artisan test`: passing, 52 tests / 200 assertions.
+  - `php artisan test`: passing, 53 tests / 209 assertions.
   - `flutter analyze`: passing with no issues.
   - `flutter test`: passing.
 - Latest APK build after MVP reviews/reputation, 2026-06-13:

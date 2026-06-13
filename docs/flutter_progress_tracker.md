@@ -23,6 +23,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - Flutter push notifications now use a Firebase Cloud Messaging path with backend device-token registration, token refresh/logout cleanup, foreground local notifications, and push tap route mapping.
 - FCM code is implemented but real phone push still needs Firebase project credentials in Flutter `.env` and Laravel/VPS env before live delivery.
 - MVP reputation is now underway: completed collaborations can be reviewed by both sides, public comments/category ratings are stored, creator discovery shows reputation chips, and discovery is sorted by the computed reliability score.
+- Hidden reviews are excluded from mobile payloads and reputation summaries, ready for the later moderation controls.
 - Backend and Flutter quality checks are green.
 - React Native app in `react_native_app/mobile` is legacy reference material only; active product work is Laravel backend plus Flutter mobile.
 
@@ -92,6 +93,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - [x] Added backend create-review validation, review notifications, user reputation summaries, and creator discovery sorting by reliability score.
 - [x] Added Flutter review prompts/forms to brand and creator completed collaboration detail pages.
 - [x] Added public collaboration review display and creator discovery reputation chips/detail panel.
+- [x] Added regression coverage so hidden reviews do not leak into collaboration responses or reputation summaries.
 
 ## Missing Or Stubbed Flutter Screens
 
@@ -107,9 +109,9 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 
 ## Verified
 
-- [x] `php artisan test` passes: 52 tests, 200 assertions.
+- [x] `php artisan test` passes: 53 tests, 209 assertions.
 - [x] `flutter analyze` passes with no issues.
-- [x] `flutter test` passes.
+- [x] `flutter test` passes: 4 tests.
 - [x] `flutter build apk --release` passes after MVP reviews/reputation.
 - [x] Latest `celibrity_flutter_test.apk` SHA-256: `7b0e3f228036921033a80de6ee50a7c79a027345d55f2d50823a627f570f0ade`.
 

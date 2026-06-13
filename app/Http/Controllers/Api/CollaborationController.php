@@ -382,6 +382,7 @@ class CollaborationController extends Controller
             'creator.creatorProfile',
             'application',
             'submissions.deliverableType',
+            'reviews' => fn ($query) => $query->published()->latest(),
             'reviews.reviewer.brandProfile',
             'reviews.reviewer.creatorProfile',
             'reviews.reviewedUser.brandProfile',

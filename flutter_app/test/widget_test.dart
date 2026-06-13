@@ -69,6 +69,52 @@ void main() {
     expect(deliverable.quantity, 2);
   });
 
+  test('parses reputation and review payloads safely', () {
+    final summary = ReputationSummary.fromJson({
+      'average_rating': '4.5',
+      'reviews_count': '8',
+      'completed_collaborations_count': '6',
+      'would_work_again_rate': '88',
+      'reliability_score': '91',
+      'rating_breakdown': {
+        'communication': '4.2',
+        'quality': 5,
+        'reliability': null,
+        'professionalism': '4',
+      },
+    });
+    final review = CollaborationReview.fromJson({
+      'id': '15',
+      'collaboration_id': '7',
+      'reviewer_id': '3',
+      'reviewed_user_id': '4',
+      'reviewer_role': 'brand',
+      'rating': '5',
+      'communication_rating': '4',
+      'quality_rating': 5,
+      'reliability_rating': null,
+      'professionalism_rating': '5',
+      'would_work_again': 1,
+      'public_comment': 'Excellent',
+      'status': 'published',
+      'created_at': '2026-06-13T00:00:00.000000Z',
+    });
+
+    expect(summary.averageRating, 4.5);
+    expect(summary.reviewsCount, 8);
+    expect(summary.completedCollaborationsCount, 6);
+    expect(summary.wouldWorkAgainRate, 88);
+    expect(summary.reliabilityScore, 91);
+    expect(summary.ratingBreakdown['communication'], 4.2);
+    expect(summary.ratingBreakdown['quality'], 5);
+    expect(summary.ratingBreakdown['reliability'], isNull);
+    expect(review.id, 15);
+    expect(review.collaborationId, 7);
+    expect(review.rating, 5);
+    expect(review.communicationRating, 4);
+    expect(review.wouldWorkAgain, isTrue);
+  });
+
   testWidgets('renders login screen when unauthenticated', (tester) async {
     await tester.pumpWidget(const MyApp());
     await tester.pump();

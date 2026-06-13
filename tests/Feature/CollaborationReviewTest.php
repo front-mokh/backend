@@ -141,6 +141,32 @@ class CollaborationReviewTest extends TestCase
             ->assertJsonPath('0.reputation_summary.would_work_again_rate', 100);
     }
 
+    public function test_hidden_reviews_are_excluded_from_mobile_payloads_and_reputation(): void
+    {
+        [$brand, , $collaboration] = $this->createCompletedCollaboration();
+
+        $this->actingAs($brand);
+
+        $this->postJson("/api/collaborations/{$collaboration->id}/reviews", [
+            'rating' => 5,
+            'would_work_again' => true,
+        ])->assertCreated();
+
+        $collaboration->reviews()->first()->update(['status' => 'hidden']);
+
+        $this->getJson("/api/collaborations/{$collaboration->id}")
+            ->assertOk()
+            ->assertJsonCount(0, 'reviews')
+            ->assertJsonPath('current_user_review', null)
+            ->assertJsonPath('creator.reputation_summary.average_rating', null)
+            ->assertJsonPath('creator.reputation_summary.reviews_count', 0);
+
+        $this->getJson('/api/creators')
+            ->assertOk()
+            ->assertJsonPath('0.reputation_summary.average_rating', null)
+            ->assertJsonPath('0.reputation_summary.reviews_count', 0);
+    }
+
     private function createCompletedCollaboration(): array
     {
         [$brand, $creator, $collaboration] = $this->createCollaboration();
