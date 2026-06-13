@@ -117,7 +117,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 6. Manually test Android push: foreground, background, terminated app, and tap-to-open route.
 7. Configure Apple APNs key/capability in Firebase before testing iOS push.
 8. Manually test iOS push: foreground, background, terminated app, and tap-to-open route.
-9. Start MVP product-depth work with internal creator reputation/ranking first: completed jobs, reviews/ratings, reliability, deliverable approvals, reports/moderation, saved creators, and creator invitations.
+9. Start MVP product-depth work with internal creator reputation/ranking first: collaboration reviews, star/category ratings, public comments, private admin feedback, completed jobs, reliability, deliverable approvals, reports/moderation, saved creators, and creator invitations.
 
 ## Known Risks / Watch Items
 

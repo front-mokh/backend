@@ -107,13 +107,22 @@
 ## Priority 3: MVP Product Functionality
 
 - Creator reputation and ranking:
-  - [ ] Add post-collaboration brand-to-creator rating/review.
-  - [ ] Add post-collaboration creator-to-brand rating/review.
+  - [ ] Add a `collaboration_reviews` backend table with collaboration id, reviewer id, reviewed user id, reviewer role, 1-5 rating, public comment, private feedback, review status, moderation fields, and timestamps.
+  - [ ] Allow each side to leave one review per completed collaboration: brand reviews creator, creator reviews brand.
+  - [ ] Add required 1-5 star rating and optional public comment after collaboration completion.
+  - [ ] Add optional private feedback visible only to admins for moderation/product quality.
+  - [ ] Add review categories for richer ranking: communication, quality, deadline/reliability, professionalism, and would-work-again.
+  - [ ] Add backend review endpoints: create review, update within a short edit window, list reviews for a creator/brand profile, and admin hide/restore review.
+  - [ ] Add Flutter review prompt when a collaboration is completed and a review is still missing.
+  - [ ] Add Flutter review form with star rating, category ratings, public comment, private feedback, and submit confirmation.
+  - [ ] Add review summaries on creator and brand profiles: average rating, review count, latest comments, completed jobs, and reliability badge.
+  - [ ] Add review notifications: remind reviewer after completion, notify reviewed user when a public review is published, notify admins when a review is reported.
+  - [ ] Add report review flow so users can flag abusive/fake comments.
   - [ ] Add a `creator_reputation_scores` backend table or computed materialized model for completed jobs, average rating, review count, approval rate, revision rate, cancellation rate, response speed, recent activity, and score version.
   - [ ] Calculate a creator ranking score from internal marketplace behavior first: completed collaborations, ratings, review quality, deliverable approval rate, reliability, and recency.
   - [ ] Surface average rating, completed-collaboration count, and reliability badge on public creator profiles.
   - [ ] Sort brand creator discovery by recommended/ranking score, with filters for rating, completed jobs, category, platform, location, and availability.
-  - [ ] Add admin controls to inspect/override suspicious reputation scores and hide abusive reviews.
+  - [ ] Add admin controls to inspect/override suspicious reputation scores, moderate comments, and hide abusive reviews.
 - Safety and moderation:
   - [ ] Add report-user/report-collaboration flow.
   - [ ] Add admin moderation queue for reported users, reported collaborations, and suspicious profiles.
