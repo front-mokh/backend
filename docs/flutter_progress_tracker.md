@@ -117,7 +117,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 6. Manually test Android push: foreground, background, terminated app, and tap-to-open route.
 7. Configure Apple APNs key/capability in Firebase before testing iOS push.
 8. Manually test iOS push: foreground, background, terminated app, and tap-to-open route.
-9. Start MVP product-depth work: social metric verification, reviews/ratings, deliverable revisions, reports/moderation, saved creators, and creator invitations.
+9. Start MVP product-depth work with internal creator reputation/ranking first: completed jobs, reviews/ratings, reliability, deliverable approvals, reports/moderation, saved creators, and creator invitations.
 
 ## Known Risks / Watch Items
 
@@ -127,7 +127,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - Notification route mapping covers the known routes from this pass, but every backend notification type still needs real-device tap testing.
 - Backend feature tests should still be added for announcement creation permissions and collaboration completion permissions.
 - New `/api/creators` endpoint is intentionally brand-only and returns the first 100 onboarded creators; pagination can be added when creator volume grows.
-- Social follower counts should favor backend enrichment from public profile URLs/handles where official APIs allow it, without requiring creator OAuth for MVP. Manual/admin verification remains the fallback; scraping public profile pages is risky and should not be treated as the core strategy.
+- Social follower counts are postponed until after the internal reputation system. MVP ranking should use marketplace behavior first; external social stats can be added later as an enrichment signal where official APIs allow it.
 
 ## Worktree Notes
 

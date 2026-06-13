@@ -106,18 +106,15 @@
 
 ## Priority 3: MVP Product Functionality
 
-- Social metrics and account verification:
-  - [ ] Add a `creator_social_accounts` backend table for platform, profile URL, handle, platform user id, follower/subscriber count, source, confidence, sync status, last synced timestamp, and verification status.
-  - [ ] Add creator onboarding/profile fields for social profile URLs/handles that our backend can enrich without requiring creator OAuth.
-  - [ ] Add YouTube public channel stats sync using YouTube Data API for subscriber/video/view counts where available.
-  - [ ] Add Instagram/Meta public-business discovery where official APIs allow our app to read public Business/Creator account metrics without each creator connecting their account.
-  - [ ] Add TikTok follower-count strategy: official no-OAuth lookup if available, otherwise manual/admin verification or a vetted data provider; do not rely on fragile scraping as the core path.
-  - [ ] Add a manual follower-count fallback with screenshot/admin verification for platforms or account types that cannot be synced automatically.
-  - [ ] Store social metric snapshots so brands can see last verified count, source, confidence, and last sync date, not just a raw number.
-- Reviews and trust:
+- Creator reputation and ranking:
   - [ ] Add post-collaboration brand-to-creator rating/review.
   - [ ] Add post-collaboration creator-to-brand rating/review.
-  - [ ] Surface average rating and completed-collaboration count on public profiles.
+  - [ ] Add a `creator_reputation_scores` backend table or computed materialized model for completed jobs, average rating, review count, approval rate, revision rate, cancellation rate, response speed, recent activity, and score version.
+  - [ ] Calculate a creator ranking score from internal marketplace behavior first: completed collaborations, ratings, review quality, deliverable approval rate, reliability, and recency.
+  - [ ] Surface average rating, completed-collaboration count, and reliability badge on public creator profiles.
+  - [ ] Sort brand creator discovery by recommended/ranking score, with filters for rating, completed jobs, category, platform, location, and availability.
+  - [ ] Add admin controls to inspect/override suspicious reputation scores and hide abusive reviews.
+- Safety and moderation:
   - [ ] Add report-user/report-collaboration flow.
   - [ ] Add admin moderation queue for reported users, reported collaborations, and suspicious profiles.
 - Collaboration lifecycle:
@@ -133,6 +130,15 @@
   - [ ] Decide whether MVP payments are handled outside the app or tracked inside the app.
   - [ ] If external, add clear collaboration/payment instructions and manual payment-status tracking.
   - [ ] If internal later, design payment provider, commission, payout, invoice, refund, and dispute workflows.
+- Later social metrics enrichment:
+  - [ ] Keep social follower/subscriber count outside the MVP ranking core until the internal reputation system is working.
+  - [ ] Add a `creator_social_accounts` backend table for platform, profile URL, handle, platform user id, follower/subscriber count, source, confidence, sync status, last synced timestamp, and verification status.
+  - [ ] Add creator onboarding/profile fields for social profile URLs/handles that our backend can enrich without requiring creator OAuth.
+  - [ ] Add YouTube public channel stats sync using YouTube Data API for subscriber/video/view counts where available.
+  - [ ] Add Instagram/Meta public-business discovery where official APIs allow our app to read public Business/Creator account metrics without each creator connecting their account.
+  - [ ] Add TikTok follower-count strategy: official no-OAuth lookup if available, otherwise manual/admin verification or a vetted data provider; do not rely on fragile scraping as the core path.
+  - [ ] Add a manual follower-count fallback with screenshot/admin verification for platforms or account types that cannot be synced automatically.
+  - [ ] Store social metric snapshots so brands can see last verified count, source, confidence, and last sync date, not just a raw number.
 
 ## Priority 4: UX And Mobile Polish
 
