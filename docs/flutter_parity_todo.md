@@ -54,7 +54,7 @@
 
 - None currently known in Priority 1.
 
-## Implemented But Incomplete Compared To React Native
+## Implemented But Still Needs Product Depth
 
 - Creator announcement discovery: search/category filters are implemented; budget, tier, and deadline filters still need advanced controls.
 - Brand announcement management: search/status filters and application counts are implemented; explicit sorting is still pending.
@@ -104,7 +104,37 @@
   - [ ] Configure iOS APNs key/capability in Firebase/Apple before iOS push release.
   - [ ] Manually test iOS push in foreground, background, terminated-app, and notification-tap flows.
 
-## Priority 3: UX And Mobile Polish
+## Priority 3: MVP Product Functionality
+
+- Social metrics and account verification:
+  - [ ] Add a `creator_social_accounts` backend table for connected platform accounts, OAuth tokens, handle, platform user id, follower/subscriber count, sync status, last synced timestamp, and verification status.
+  - [ ] Add creator UI to connect official social accounts instead of only entering profile links manually.
+  - [ ] Add Instagram/Meta integration using official APIs where supported, with creator consent and admin/app-review requirements documented.
+  - [ ] Add TikTok integration using official Login/Display APIs where supported, with creator consent and app-review requirements documented.
+  - [ ] Add YouTube channel stats sync using YouTube Data API for public subscriber/video/view counts where available.
+  - [ ] Add a manual follower-count fallback with screenshot/admin verification for platforms or account types that cannot be synced automatically.
+  - [ ] Store social metric snapshots so brands can see last verified count and last sync date, not just a raw number.
+- Reviews and trust:
+  - [ ] Add post-collaboration brand-to-creator rating/review.
+  - [ ] Add post-collaboration creator-to-brand rating/review.
+  - [ ] Surface average rating and completed-collaboration count on public profiles.
+  - [ ] Add report-user/report-collaboration flow.
+  - [ ] Add admin moderation queue for reported users, reported collaborations, and suspicious profiles.
+- Collaboration lifecycle:
+  - [ ] Add "revision requested" deliverable status with required feedback.
+  - [ ] Allow creators to resubmit a rejected/revision-requested deliverable.
+  - [ ] Add clearer collaboration timeline states: accepted, in progress, awaiting deliverable, revision requested, approved, completed, cancelled.
+  - [ ] Add cancellation reason and optional admin review flag.
+- Brand growth tools:
+  - [ ] Add saved/favorite creators for brands.
+  - [ ] Add invite creator to announcement/collaboration flow.
+  - [ ] Add creator shortlist inside an announcement.
+- MVP payment stance:
+  - [ ] Decide whether MVP payments are handled outside the app or tracked inside the app.
+  - [ ] If external, add clear collaboration/payment instructions and manual payment-status tracking.
+  - [ ] If internal later, design payment provider, commission, payout, invoice, refund, and dispute workflows.
+
+## Priority 4: UX And Mobile Polish
 
 - [x] Add loading, empty, and error states for primary list screens.
 - [x] Add pull-to-refresh on list-heavy screens, including empty/error states.
@@ -115,7 +145,7 @@
 - [x] Add image/file size validation feedback before upload.
 - [x] Add offline/network failure messaging for API and websocket failures.
 
-## Priority 4: Backend/API Hardening
+## Priority 5: Backend/API Hardening
 
 - Add feature tests for:
   - Non-brand users cannot create announcements.
@@ -127,14 +157,19 @@
 - Review policies for every collaboration and submission endpoint.
 - Confirm uploaded files are exposed through stable public URLs consumed by mobile.
 - Confirm Reverb channel names and broadcast event names are documented for app clients.
+- Add pagination contracts for announcements, applications, collaborations, notifications, and creator discovery.
+- Add API rate limiting for auth, application submit, message send, deliverable submit, and social metric sync endpoints.
+- Add audit logs for admin-sensitive actions: profile verification, report handling, user suspension, collaboration cancellation, and metric verification.
 
-## Priority 5: Release Readiness
+## Priority 6: Release Readiness
 
 - Add Flutter integration tests for login, onboarding, announcement browsing, applying, chat, deliverable submission, and notification navigation.
 - Add environment documentation for Flutter `.env`, backend API URL, Reverb host/port/key/scheme, and storage URL.
 - Add build scripts/checklist for Android and iOS.
 - Add CI steps for `php artisan test`, `flutter analyze`, and `flutter test`.
 - Review app icons, splash screen, permissions, package IDs, and signing configuration.
+- Add closed-beta QA checklist for Android devices covering signup, onboarding, announcement creation, apply, accept/reject, chat, deliverables, notifications, and logout/login.
+- Add production operations checklist for VPS backups, queue workers, Reverb, PM2 processes, storage symlink, logs, and deploy rollback.
 
 ## Current Verification
 

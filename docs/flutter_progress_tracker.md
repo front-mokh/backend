@@ -23,7 +23,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - Flutter push notifications now use a Firebase Cloud Messaging path with backend device-token registration, token refresh/logout cleanup, foreground local notifications, and push tap route mapping.
 - FCM code is implemented but real phone push still needs Firebase project credentials in Flutter `.env` and Laravel/VPS env before live delivery.
 - Backend and Flutter quality checks are green.
-- React Native app in `react_native_app/mobile` remains the feature reference for parity.
+- React Native app in `react_native_app/mobile` is legacy reference material only; active product work is Laravel backend plus Flutter mobile.
 
 ## Completed
 
@@ -117,6 +117,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 6. Manually test Android push: foreground, background, terminated app, and tap-to-open route.
 7. Configure Apple APNs key/capability in Firebase before testing iOS push.
 8. Manually test iOS push: foreground, background, terminated app, and tap-to-open route.
+9. Start MVP product-depth work: social metric verification, reviews/ratings, deliverable revisions, reports/moderation, saved creators, and creator invitations.
 
 ## Known Risks / Watch Items
 
@@ -126,6 +127,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - Notification route mapping covers the known routes from this pass, but every backend notification type still needs real-device tap testing.
 - Backend feature tests should still be added for announcement creation permissions and collaboration completion permissions.
 - New `/api/creators` endpoint is intentionally brand-only and returns the first 100 onboarded creators; pagination can be added when creator volume grows.
+- Social follower counts should be collected through official APIs or manual/admin verification; scraping public profile pages is risky and should not be treated as the core strategy.
 
 ## Worktree Notes
 
