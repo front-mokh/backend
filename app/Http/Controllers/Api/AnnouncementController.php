@@ -6,33 +6,22 @@ use App\Enums\ApplicationStatus;
 use App\Enums\ProjectStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Enum;
-use Carbon\Carbon;
 
 class AnnouncementController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Announcement::with(['category', 'platforms', 'deliverables', 'influencerTier'])
-            ->withCount([
-                'applications',
-                'applications as applications_pending_count' => function ($query) {
-                    $query->where('status', ApplicationStatus::PENDING->value);
-                },
-                'applications as applications_accepted_count' => function ($query) {
-                    $query->where('status', ApplicationStatus::ACCEPTED->value);
-                },
-                'applications as applications_rejected_count' => function ($query) {
-                    $query->where('status', ApplicationStatus::REJECTED->value);
-                },
-            ]);
+        $query = Announcement::with($this->announcementRelations())
+            ->withCount($this->applicationCountRelations());
 
         if ($request->user()->isBrand()) {
             $query->where('user_id', $request->user()->id);
         } else {
             $query->where('status', ProjectStatus::OPEN)
-                  ->where('deadline', '>=', Carbon::today());
+                ->where('deadline', '>=', Carbon::today());
 
             if ($request->has('category_id')) {
                 $query->where('category_id', $request->category_id);
@@ -52,7 +41,7 @@ class AnnouncementController extends Controller
 
     public function store(Request $request)
     {
-        if (!$request->user()->isBrand()) {
+        if (! $request->user()->isBrand()) {
             return response()->json(['message' => 'Only brands can create announcements'], 403);
         }
 
@@ -79,7 +68,7 @@ class AnnouncementController extends Controller
                 function ($attribute, $value, $fail) use ($request) {
                     $platforms = $request->input('platforms', []);
                     $deliverableType = \App\Models\DeliverableType::find($value);
-                    if ($deliverableType && !in_array($deliverableType->platform_id, $platforms)) {
+                    if ($deliverableType && ! in_array($deliverableType->platform_id, $platforms)) {
                         $fail('The requested deliverable type does not belong to any of the selected platforms.');
                     }
                 },
@@ -99,34 +88,22 @@ class AnnouncementController extends Controller
 
         $announcement = Announcement::create($validated);
 
-        if (!empty($validated['platforms'])) {
+        if (! empty($validated['platforms'])) {
             $announcement->platforms()->attach($validated['platforms']);
         }
 
-        if (!empty($validated['deliverables'])) {
+        if (! empty($validated['deliverables'])) {
             foreach ($validated['deliverables'] as $deliverable) {
                 $announcement->deliverables()->attach($deliverable['id'], ['quantity' => $deliverable['quantity']]);
             }
         }
 
-        return $announcement->load(['category', 'platforms', 'deliverables', 'influencerTier']);
+        return response()->json($this->loadAnnouncementResponse($announcement), 201);
     }
 
     public function show(Request $request, Announcement $announcement)
     {
-        $announcement->load(['category', 'platforms', 'deliverables', 'influencerTier', 'user.brandProfile'])
-            ->loadCount([
-                'applications',
-                'applications as applications_pending_count' => function ($query) {
-                    $query->where('status', 'pending');
-                },
-                'applications as applications_accepted_count' => function ($query) {
-                    $query->where('status', 'accepted');
-                },
-                'applications as applications_rejected_count' => function ($query) {
-                    $query->where('status', 'rejected');
-                },
-            ]);
+        $this->loadAnnouncementResponse($announcement);
 
         if ($request->user()->isCreator()) {
             $announcement->setRelation(
@@ -168,7 +145,7 @@ class AnnouncementController extends Controller
                 function ($attribute, $value, $fail) use ($request, $announcement) {
                     $platforms = $request->input('platforms', $announcement->platforms->pluck('id')->toArray());
                     $deliverableType = \App\Models\DeliverableType::find($value);
-                    if ($deliverableType && !in_array($deliverableType->platform_id, $platforms)) {
+                    if ($deliverableType && ! in_array($deliverableType->platform_id, $platforms)) {
                         $fail('The requested deliverable type does not belong to any of the selected platforms.');
                     }
                 },
@@ -199,7 +176,7 @@ class AnnouncementController extends Controller
 
         if (array_key_exists('deliverables', $validated)) {
             $deliverableData = [];
-            if (!empty($validated['deliverables'])) {
+            if (! empty($validated['deliverables'])) {
                 foreach ($validated['deliverables'] as $deliverable) {
                     $deliverableData[$deliverable['id']] = ['quantity' => $deliverable['quantity']];
                 }
@@ -207,24 +184,14 @@ class AnnouncementController extends Controller
             $announcement->deliverables()->sync($deliverableData);
         }
 
-        return $announcement->load(['category', 'platforms', 'deliverables', 'influencerTier'])->loadCount([
-            'applications',
-            'applications as applications_pending_count' => function ($query) {
-                $query->where('status', 'pending');
-            },
-            'applications as applications_accepted_count' => function ($query) {
-                $query->where('status', 'accepted');
-            },
-            'applications as applications_rejected_count' => function ($query) {
-                $query->where('status', 'rejected');
-            },
-        ]);
+        return $this->loadAnnouncementResponse($announcement);
     }
 
     public function destroy(Announcement $announcement)
     {
         \Illuminate\Support\Facades\Gate::authorize('delete', $announcement);
         $announcement->delete();
+
         return response()->noContent();
     }
 
@@ -234,17 +201,40 @@ class AnnouncementController extends Controller
 
         $announcement->update(['status' => ProjectStatus::CLOSED->value]);
 
-        return response()->json($announcement->load(['category', 'platforms', 'deliverables', 'influencerTier'])->loadCount([
+        return response()->json($this->loadAnnouncementResponse($announcement));
+    }
+
+    private function loadAnnouncementResponse(Announcement $announcement): Announcement
+    {
+        return $announcement
+            ->load($this->announcementRelations())
+            ->loadCount($this->applicationCountRelations());
+    }
+
+    private function announcementRelations(): array
+    {
+        return [
+            'category',
+            'platforms',
+            'deliverables',
+            'influencerTier',
+            'user.brandProfile',
+        ];
+    }
+
+    private function applicationCountRelations(): array
+    {
+        return [
             'applications',
             'applications as applications_pending_count' => function ($query) {
-                $query->where('status', 'pending');
+                $query->where('status', ApplicationStatus::PENDING->value);
             },
             'applications as applications_accepted_count' => function ($query) {
-                $query->where('status', 'accepted');
+                $query->where('status', ApplicationStatus::ACCEPTED->value);
             },
             'applications as applications_rejected_count' => function ($query) {
-                $query->where('status', 'rejected');
+                $query->where('status', ApplicationStatus::REJECTED->value);
             },
-        ]));
+        ];
     }
 }

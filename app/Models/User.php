@@ -2,18 +2,12 @@
 
 namespace App\Models;
 
-use Laravel\Sanctum\HasApiTokens;
+use App\Enums\UserType;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use App\Enums\UserType;
-use App\Models\BrandProfile;
-use App\Models\CreatorProfile;
-use App\Models\SocialLink; // Import SocialLink
-use App\Models\Category; // Import Category
-use App\Models\Announcement;
-use App\Models\Application;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -42,6 +36,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
+        'expo_push_token',
     ];
 
     /**
@@ -69,8 +64,9 @@ class User extends Authenticatable implements MustVerifyEmail
             return $this->brandProfile->name;
         }
         if ($this->isCreator() && $this->creatorProfile) {
-            return $this->creatorProfile->nickname ?? ($this->creatorProfile->first_name . ' ' . $this->creatorProfile->last_name);
+            return $this->creatorProfile->nickname ?? ($this->creatorProfile->first_name.' '.$this->creatorProfile->last_name);
         }
+
         return $this->email;
     }
 

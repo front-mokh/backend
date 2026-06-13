@@ -39,6 +39,8 @@
 - Added required deliverables by platform to brand/creator candidature detail views and the creator collaboration deliverables tab.
 - Fixed Android bottom safe-area spacing for the creator deliverable submit action and modal submit button.
 - Added platform names to submitted deliverable titles and made candidature announcement cards open their announcement details.
+- Standardized key backend response payloads for announcements, applications, collaborations, and submission status updates.
+- Hid Expo push tokens from serialized user responses and added response-contract tests for mobile-critical payloads.
 
 ## Missing Or Stubbed Flutter Pages
 
@@ -119,8 +121,9 @@
 
 ## Current Verification
 
-- Latest Flutter pass, 2026-06-13:
+- Latest full pass, 2026-06-13:
+  - `php artisan test`: passing, 40 tests / 139 assertions.
   - `flutter analyze`: passing with no issues.
   - `flutter test`: passing.
+- Latest APK build before backend-only response pass:
   - `flutter build apk --release`: passing.
-- Backend unchanged in latest pass; last known `php artisan test`: passing, 31 tests / 100 assertions.

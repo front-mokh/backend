@@ -17,6 +17,13 @@ class PriorityOneApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['broadcasting.default' => 'null']);
+    }
+
     public function test_brand_can_browse_onboarded_creators(): void
     {
         $brand = User::factory()->create(['type' => UserType::BRAND]);
@@ -47,12 +54,13 @@ class PriorityOneApiTest extends TestCase
 
         $this->actingAs($brand);
 
-        $this->getJson('/api/creators?search=Amina&category_id=' . $fashion->id)
+        $this->getJson('/api/creators?search=Amina&category_id='.$fashion->id)
             ->assertOk()
             ->assertJsonCount(1)
             ->assertJsonPath('0.id', $creator->id)
             ->assertJsonPath('0.creator_profile.first_name', 'Amina')
-            ->assertJsonPath('0.categories.0.name', 'Fashion');
+            ->assertJsonPath('0.categories.0.name', 'Fashion')
+            ->assertJsonMissingPath('0.expo_push_token');
     }
 
     public function test_creator_cannot_browse_creator_discovery_endpoint(): void
@@ -73,12 +81,77 @@ class PriorityOneApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('id', $application->id)
             ->assertJsonPath('user.creator_profile.first_name', 'Nadia')
-            ->assertJsonPath('announcement.user.brand_profile.name', 'Brand Co');
+            ->assertJsonPath('announcement.user.brand_profile.name', 'Brand Co')
+            ->assertJsonMissingPath('user.expo_push_token')
+            ->assertJsonMissingPath('announcement.user.expo_push_token');
 
         $this->actingAs($creator);
         $this->getJson("/api/applications/{$application->id}")
             ->assertOk()
-            ->assertJsonPath('id', $application->id);
+            ->assertJsonPath('id', $application->id)
+            ->assertJsonPath('announcement.user.brand_profile.name', 'Brand Co');
+    }
+
+    public function test_accept_application_response_includes_collaboration_and_context(): void
+    {
+        [$brand, , $application] = $this->createApplicationFixture();
+
+        $this->actingAs($brand);
+
+        $this->postJson("/api/applications/{$application->id}/accept")
+            ->assertOk()
+            ->assertJsonPath('id', $application->id)
+            ->assertJsonPath('status', ApplicationStatus::ACCEPTED->value)
+            ->assertJsonPath('collaboration.announcement_id', $application->announcement_id)
+            ->assertJsonPath('announcement.user.brand_profile.name', 'Brand Co')
+            ->assertJsonPath('user.creator_profile.first_name', 'Nadia');
+    }
+
+    public function test_apply_response_is_hydrated_for_mobile_refresh(): void
+    {
+        [$brand, $creator] = $this->createUsersWithProfiles();
+        $category = Category::create(['name' => 'Food']);
+        $announcement = Announcement::create([
+            'user_id' => $brand->id,
+            'category_id' => $category->id,
+            'title' => 'Campagne food',
+            'description' => 'Description food',
+            'budget_min' => 100,
+            'budget_max' => 300,
+            'deadline' => now()->addWeek()->toDateString(),
+        ]);
+
+        $this->actingAs($creator);
+
+        $this->postJson("/api/announcements/{$announcement->id}/apply", [
+            'message' => 'Je veux participer',
+            'proposed_budget' => 250,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('announcement.user.brand_profile.name', 'Brand Co')
+            ->assertJsonPath('announcement.category.name', 'Food')
+            ->assertJsonPath('user.creator_profile.first_name', 'Nadia')
+            ->assertJsonPath('collaboration', null);
+    }
+
+    public function test_user_response_never_exposes_push_token(): void
+    {
+        $brand = User::factory()->create([
+            'type' => UserType::BRAND,
+            'expo_push_token' => 'ExponentPushToken[sensitive]',
+        ]);
+        BrandProfile::create([
+            'user_id' => $brand->id,
+            'name' => 'Brand Co',
+            'phone' => '0612345678',
+            'location' => 'Alger',
+        ]);
+
+        $this->actingAs($brand);
+
+        $this->getJson('/api/user')
+            ->assertOk()
+            ->assertJsonMissingPath('expo_push_token');
     }
 
     public function test_application_show_rejects_outsiders(): void
@@ -127,24 +200,7 @@ class PriorityOneApiTest extends TestCase
 
     private function createApplicationFixture(): array
     {
-        $brand = User::factory()->create(['type' => UserType::BRAND]);
-        BrandProfile::create([
-            'user_id' => $brand->id,
-            'name' => 'Brand Co',
-            'phone' => '0612345678',
-            'location' => 'Alger',
-        ]);
-
-        $creator = User::factory()->create([
-            'type' => UserType::CREATOR,
-            'onboarding_completed_at' => now(),
-        ]);
-        CreatorProfile::create([
-            'user_id' => $creator->id,
-            'first_name' => 'Nadia',
-            'last_name' => 'Creator',
-            'phone' => '0612345678',
-        ]);
+        [$brand, $creator] = $this->createUsersWithProfiles();
 
         $category = Category::create(['name' => 'Tech']);
         $announcement = Announcement::create([
@@ -166,5 +222,29 @@ class PriorityOneApiTest extends TestCase
         ]);
 
         return [$brand, $creator, $application];
+    }
+
+    private function createUsersWithProfiles(): array
+    {
+        $brand = User::factory()->create(['type' => UserType::BRAND]);
+        BrandProfile::create([
+            'user_id' => $brand->id,
+            'name' => 'Brand Co',
+            'phone' => '0612345678',
+            'location' => 'Alger',
+        ]);
+
+        $creator = User::factory()->create([
+            'type' => UserType::CREATOR,
+            'onboarding_completed_at' => now(),
+        ]);
+        CreatorProfile::create([
+            'user_id' => $creator->id,
+            'first_name' => 'Nadia',
+            'last_name' => 'Creator',
+            'phone' => '0612345678',
+        ]);
+
+        return [$brand, $creator];
     }
 }

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Events\MessageReadEvent;
 use App\Events\NewMessageEvent;
+use App\Http\Controllers\Controller;
 use App\Models\Collaboration;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
@@ -14,7 +14,7 @@ class CollaborationController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        
+
         $query = Collaboration::query()
             ->with(['announcement', 'brand.brandProfile', 'creator.creatorProfile', 'application']);
 
@@ -40,26 +40,15 @@ class CollaborationController extends Controller
 
     public function show(Request $request, Collaboration $collaboration)
     {
-        // Authorize user is part of the collaboration
-        if ($collaboration->brand_id !== $request->user()->id && $collaboration->creator_id !== $request->user()->id) {
+        if (! $this->isParticipant($collaboration, $request->user()->id)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $this->markReadForUser($collaboration, $request->user(), true);
 
-        // Load relationships
-        $collaboration->load([
-            'announcement.platforms',
-            'announcement.deliverables',
-            'brand.brandProfile', 
-            'creator.creatorProfile', 
-            'application',
-            'messages.sender',
-            'submissions.deliverableType'
-        ]);
-        $collaboration->unread_count = $collaboration->unreadCountFor($request->user());
-
-        return response()->json($collaboration);
+        return response()->json(
+            $this->loadCollaborationResponse($collaboration, $request->user())
+        );
     }
 
     /**
@@ -68,7 +57,7 @@ class CollaborationController extends Controller
      */
     public function heartbeat(Request $request, Collaboration $collaboration)
     {
-        if ($collaboration->brand_id !== $request->user()->id && $collaboration->creator_id !== $request->user()->id) {
+        if (! $this->isParticipant($collaboration, $request->user()->id)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -89,7 +78,7 @@ class CollaborationController extends Controller
      */
     public function markAsRead(Request $request, Collaboration $collaboration)
     {
-        if ($collaboration->brand_id !== $request->user()->id && $collaboration->creator_id !== $request->user()->id) {
+        if (! $this->isParticipant($collaboration, $request->user()->id)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -101,12 +90,12 @@ class CollaborationController extends Controller
     public function updateStatus(Request $request, Collaboration $collaboration)
     {
         // Only brand can complete or cancel, for simplicity
-        if ($request->user()->id !== $collaboration->brand_id) {
+        if (! $this->isBrandOwner($collaboration, $request->user()->id)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $validated = $request->validate([
-            'status' => 'required|in:in_progress,completed,cancelled'
+            'status' => 'required|in:in_progress,completed,cancelled',
         ]);
 
         $updateData = ['status' => $validated['status']];
@@ -116,12 +105,14 @@ class CollaborationController extends Controller
 
         $collaboration->update($updateData);
 
-        return response()->json($collaboration);
+        return response()->json(
+            $this->loadCollaborationResponse($collaboration, $request->user())
+        );
     }
 
     public function complete(Request $request, Collaboration $collaboration)
     {
-        if ($request->user()->id !== $collaboration->brand_id) {
+        if (! $this->isBrandOwner($collaboration, $request->user()->id)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -130,20 +121,14 @@ class CollaborationController extends Controller
             'completed_at' => now(),
         ]);
 
-        return response()->json($collaboration->fresh([
-            'announcement.platforms',
-            'announcement.deliverables',
-            'brand.brandProfile',
-            'creator.creatorProfile',
-            'application',
-            'messages.sender',
-            'submissions.deliverableType',
-        ]));
+        return response()->json(
+            $this->loadCollaborationResponse($collaboration, $request->user())
+        );
     }
 
     public function sendMessage(Request $request, Collaboration $collaboration)
     {
-        if ($collaboration->brand_id !== $request->user()->id && $collaboration->creator_id !== $request->user()->id) {
+        if (! $this->isParticipant($collaboration, $request->user()->id)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -196,16 +181,16 @@ class CollaborationController extends Controller
             : $collaboration->brand;
 
         // Layer 1: Skip if recipient is actively viewing the chat
-        if (!$collaboration->fresh()->isUserViewing($recipient)) {
+        if (! $collaboration->fresh()->isUserViewing($recipient)) {
             // Layer 2: Throttle — only push if no recent push for this collab (2 min window)
             $throttleKey = "msg_push:{$recipient->id}:{$collaboration->id}";
 
-            if (!\Illuminate\Support\Facades\Cache::has($throttleKey)) {
+            if (! \Illuminate\Support\Facades\Cache::has($throttleKey)) {
                 // Mark throttle (expires in 2 minutes)
                 \Illuminate\Support\Facades\Cache::put($throttleKey, true, 120);
 
                 // Send push-only (no DB notification record — messages ≠ notifications)
-                $route = ($recipient->isBrand() ? '/brand' : '/creator') . '/collaboration-details/' . $collaboration->id;
+                $route = ($recipient->isBrand() ? '/brand' : '/creator').'/collaboration-details/'.$collaboration->id;
 
                 NotificationService::sendPushOnly(
                     $recipient,
@@ -302,7 +287,7 @@ class CollaborationController extends Controller
             'deliverable_submitted',
             'Nouveau livrable',
             "{$request->user()->display_name} a soumis un nouveau livrable pour {$collaboration->announcement->title}.",
-            ['route' => '/brand/collaboration-details/' . $collaboration->id, 'params' => ['id' => $collaboration->id, 'tab' => 'deliverables']]
+            ['route' => '/brand/collaboration-details/'.$collaboration->id, 'params' => ['id' => $collaboration->id, 'tab' => 'deliverables']]
         );
 
         return response()->json($submission->load('deliverableType'), 201);
@@ -311,9 +296,9 @@ class CollaborationController extends Controller
     public function updateSubmissionStatus(Request $request, \App\Models\DeliverableSubmission $submission)
     {
         $collaboration = $submission->collaboration;
-        
+
         // Only Brand can approve or reject
-        if ($request->user()->id !== $collaboration->brand_id) {
+        if (! $this->isBrandOwner($collaboration, $request->user()->id)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -328,12 +313,41 @@ class CollaborationController extends Controller
         $statusText = $validated['status'] === 'approved' ? 'approuvé' : 'refusé';
         NotificationService::send(
             $collaboration->creator,
-            'deliverable_' . $validated['status'],
+            'deliverable_'.$validated['status'],
             "Livrable {$statusText}",
             "Votre livrable pour {$collaboration->announcement->title} a été {$statusText}.",
-            ['route' => '/creator/collaboration-details/' . $collaboration->id, 'params' => ['id' => $collaboration->id, 'tab' => 'deliverables']]
+            ['route' => '/creator/collaboration-details/'.$collaboration->id, 'params' => ['id' => $collaboration->id, 'tab' => 'deliverables']]
         );
 
-        return response()->json($submission);
+        return response()->json($submission->load('deliverableType'));
+    }
+
+    private function isParticipant(Collaboration $collaboration, int $userId): bool
+    {
+        return $collaboration->brand_id === $userId || $collaboration->creator_id === $userId;
+    }
+
+    private function isBrandOwner(Collaboration $collaboration, int $userId): bool
+    {
+        return $collaboration->brand_id === $userId;
+    }
+
+    private function loadCollaborationResponse(Collaboration $collaboration, $user): Collaboration
+    {
+        $collaboration = $collaboration->fresh([
+            'announcement.category',
+            'announcement.platforms',
+            'announcement.deliverables',
+            'announcement.influencerTier',
+            'brand.brandProfile',
+            'creator.creatorProfile',
+            'application',
+            'messages.sender',
+            'submissions.deliverableType',
+        ]);
+
+        $collaboration->unread_count = $collaboration->unreadCountFor($user);
+
+        return $collaboration;
     }
 }

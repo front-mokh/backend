@@ -8,6 +8,7 @@ use App\Models\Announcement;
 use App\Models\Application;
 use App\Models\Category;
 use App\Models\Collaboration;
+use App\Models\DeliverableSubmission;
 use App\Models\DeliverableType;
 use App\Models\Message;
 use App\Models\Platform;
@@ -136,6 +137,56 @@ class ChatReadTrackingTest extends TestCase
                 'message',
                 "Ce livrable n'est pas demandé pour cette collaboration."
             );
+    }
+
+    public function test_brand_can_complete_collaboration_and_get_full_response(): void
+    {
+        [$brand, , $collaboration] = $this->createCollaboration();
+        $platform = Platform::create(['name' => 'TikTok']);
+        $deliverable = DeliverableType::create([
+            'platform_id' => $platform->id,
+            'name' => 'Video',
+        ]);
+        $collaboration->announcement->platforms()->attach($platform->id);
+        $collaboration->announcement->deliverables()->attach($deliverable->id, [
+            'quantity' => 1,
+        ]);
+
+        $this->actingAs($brand);
+
+        $this->postJson("/api/collaborations/{$collaboration->id}/complete")
+            ->assertOk()
+            ->assertJsonPath('status', 'completed')
+            ->assertJsonPath('announcement.platforms.0.name', 'TikTok')
+            ->assertJsonPath('announcement.deliverables.0.name', 'Video')
+            ->assertJsonPath('brand.id', $brand->id)
+            ->assertJsonPath('unread_count', 0);
+    }
+
+    public function test_submission_status_response_keeps_deliverable_type(): void
+    {
+        [$brand, , $collaboration] = $this->createCollaboration();
+        $platform = Platform::create(['name' => 'Instagram']);
+        $deliverable = DeliverableType::create([
+            'platform_id' => $platform->id,
+            'name' => 'Story',
+        ]);
+        $submission = DeliverableSubmission::create([
+            'collaboration_id' => $collaboration->id,
+            'deliverable_type_id' => $deliverable->id,
+            'url' => 'https://example.com/story',
+            'status' => 'submitted',
+        ]);
+
+        $this->actingAs($brand);
+
+        $this->patchJson("/api/submissions/{$submission->id}", [
+            'status' => 'approved',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'approved')
+            ->assertJsonPath('deliverable_type.name', 'Story')
+            ->assertJsonPath('deliverable_type.platform_id', $platform->id);
     }
 
     private function createCollaboration(): array

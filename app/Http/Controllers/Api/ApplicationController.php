@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
-use App\Models\Application;
 use App\Models\Announcement;
+use App\Models\Application;
+use App\Models\Collaboration;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
@@ -13,7 +14,7 @@ class ApplicationController extends Controller
 {
     public function store(Request $request, Announcement $announcement)
     {
-        if (!$request->user()->isCreator()) {
+        if (! $request->user()->isCreator()) {
             return response()->json(['message' => 'Only creators can apply'], 403);
         }
 
@@ -49,10 +50,10 @@ class ApplicationController extends Controller
             'new_candidature',
             'Nouvelle candidature',
             "{$nickname} a postulé à votre annonce {$announcement->title}.",
-            ['route' => '/brand/application-details/' . $application->id . '?announcementId=' . $announcement->id, 'params' => ['id' => $application->id, 'announcementId' => $announcement->id]]
+            ['route' => '/brand/application-details/'.$application->id.'?announcementId='.$announcement->id, 'params' => ['id' => $application->id, 'announcementId' => $announcement->id]]
         );
 
-        return response()->json($application, 201);
+        return response()->json($this->loadApplicationResponse($application), 201);
     }
 
     public function index(Request $request)
@@ -65,7 +66,7 @@ class ApplicationController extends Controller
                 ->whereHas('announcement', function ($q) use ($user) {
                     $q->where('user_id', $user->id);
                 })
-                ->with(['user.creatorProfile', 'user.socialLinks', 'user.categories', 'announcement']);
+                ->with($this->applicationRelations());
 
             if ($request->has('announcement_id')) {
                 $query->where('announcement_id', $request->announcement_id);
@@ -80,7 +81,7 @@ class ApplicationController extends Controller
             // Creators see their own applications
             return Application::query()
                 ->where('user_id', $user->id)
-                ->with(['announcement.user.brandProfile'])
+                ->with($this->applicationRelations())
                 ->latest()
                 ->get();
         }
@@ -97,30 +98,19 @@ class ApplicationController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        return $application->load([
-            'user.creatorProfile',
-            'user.socialLinks',
-            'user.categories',
-            'announcement.category',
-            'announcement.platforms',
-            'announcement.deliverables',
-            'announcement.influencerTier',
-            'announcement.user.brandProfile',
-            'collaboration',
-        ]);
+        return $this->loadApplicationResponse($application);
     }
-
 
     public function accept(Request $request, Application $application)
     {
-         if ($request->user()->id !== $application->announcement->user_id) {
+        if ($request->user()->id !== $application->announcement->user_id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
-        
+
         $application->update(['status' => ApplicationStatus::ACCEPTED->value]);
 
         // Create the collaboration workspace
-        $collaboration = \App\Models\Collaboration::firstOrCreate(
+        $collaboration = Collaboration::firstOrCreate(
             ['application_id' => $application->id],
             [
                 'announcement_id' => $application->announcement_id,
@@ -136,18 +126,18 @@ class ApplicationController extends Controller
             'candidature_accepted',
             'Félicitations !',
             "Votre candidature pour {$application->announcement->title} a été acceptée.",
-            ['route' => '/creator/collaboration-details/' . $collaboration->id, 'params' => ['id' => $collaboration->id]]
+            ['route' => '/creator/collaboration-details/'.$collaboration->id, 'params' => ['id' => $collaboration->id]]
         );
 
-        return response()->json($application);
+        return response()->json($this->loadApplicationResponse($application->refresh()));
     }
 
     public function reject(Request $request, Application $application)
     {
-         if ($request->user()->id !== $application->announcement->user_id) {
+        if ($request->user()->id !== $application->announcement->user_id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
-        
+
         $application->update(['status' => ApplicationStatus::REJECTED->value]);
 
         // Notify Creator
@@ -159,6 +149,26 @@ class ApplicationController extends Controller
             ['route' => '/creator/applications']
         );
 
-        return response()->json($application);
+        return response()->json($this->loadApplicationResponse($application->refresh()));
+    }
+
+    private function loadApplicationResponse(Application $application): Application
+    {
+        return $application->load($this->applicationRelations());
+    }
+
+    private function applicationRelations(): array
+    {
+        return [
+            'user.creatorProfile',
+            'user.socialLinks',
+            'user.categories',
+            'announcement.category',
+            'announcement.platforms',
+            'announcement.deliverables',
+            'announcement.influencerTier',
+            'announcement.user.brandProfile',
+            'collaboration',
+        ];
     }
 }
