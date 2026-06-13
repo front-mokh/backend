@@ -12,6 +12,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_status.dart';
 import '../../../core/utils/file_utils.dart';
 import '../../../core/widgets/attachment_preview.dart';
+import '../../../core/widgets/collaboration_review_section.dart';
 import '../../../core/services/websocket_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
@@ -214,6 +215,16 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
 
   Color _statusColor(String status) {
     return AppStatus.collaborationColor(status);
+  }
+
+  Future<void> _submitReview(Map<String, dynamic> payload) async {
+    final currentMessages = _collab?.messages;
+    await ApiService().submitCollaborationReview(widget.id, payload);
+    final updated = await ApiService().getCollaboration(widget.id);
+    if (!mounted) return;
+    setState(() {
+      _collab = updated.copyWith(messages: currentMessages);
+    });
   }
 
   Future<void> _markAsRead() async {
@@ -509,7 +520,12 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
       color: AppColors.primary,
       onRefresh: _load,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          MediaQuery.of(context).padding.bottom + 16,
+        ),
         children: [
           Container(
             padding: const EdgeInsets.all(16),
@@ -563,6 +579,14 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
               'Date de fin',
               collaboration.completedAt!,
             ),
+          if (collaboration.status == 'completed') ...[
+            const SizedBox(height: 8),
+            CollaborationReviewSection(
+              collaboration: collaboration,
+              reviewedName: brand?.name ?? 'cette marque',
+              onSubmit: _submitReview,
+            ),
+          ],
           if (_isCollaborationLocked) ...[
             const SizedBox(height: 8),
             Container(

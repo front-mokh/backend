@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\ApplicationController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CollaborationController;
+use App\Http\Controllers\Api\CollaborationReviewController;
 use App\Http\Controllers\Api\DeliverableTypeController;
 use App\Http\Controllers\Api\IndustryController;
 use App\Http\Controllers\Api\InfluencerTierController;
@@ -77,6 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/collaborations/{collaboration}/read', [CollaborationController::class, 'markAsRead']);
     Route::post('/collaborations/{collaboration}/complete', [CollaborationController::class, 'complete']);
     Route::patch('/collaborations/{collaboration}/status', [CollaborationController::class, 'updateStatus']);
+    Route::post('/collaborations/{collaboration}/reviews', [CollaborationReviewController::class, 'store']);
     Route::post('/collaborations/{collaboration}/submissions', [CollaborationController::class, 'submitDeliverable']);
     Route::patch('/submissions/{submission}', [CollaborationController::class, 'updateSubmissionStatus']);
 

@@ -128,6 +128,120 @@ class _BrandCreatorsScreenState extends State<BrandCreatorsScreen> {
     return trimmed.isEmpty ? fallback : trimmed;
   }
 
+  String _ratingText(double rating) {
+    return rating == rating.roundToDouble()
+        ? rating.toStringAsFixed(0)
+        : rating.toStringAsFixed(1);
+  }
+
+  Widget _reputationPills(ReputationSummary summary) {
+    final average = summary.averageRating;
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        _metricPill(
+          average == null ? Icons.star_border_rounded : Icons.star_rounded,
+          average == null
+              ? 'Nouveau'
+              : '${_ratingText(average)} (${summary.reviewsCount})',
+          AppColors.warning,
+        ),
+        if (summary.completedCollaborationsCount > 0)
+          _metricPill(
+            Icons.task_alt_rounded,
+            '${summary.completedCollaborationsCount} terminé${summary.completedCollaborationsCount > 1 ? 's' : ''}',
+            AppColors.success,
+          ),
+        if (summary.reliabilityScore > 0)
+          _metricPill(
+            Icons.workspace_premium_outlined,
+            'Score ${summary.reliabilityScore}',
+            AppColors.primary,
+          ),
+      ],
+    );
+  }
+
+  Widget _metricPill(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _reputationPanel(ReputationSummary summary) {
+    final average = summary.averageRating;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                average == null
+                    ? Icons.star_border_rounded
+                    : Icons.star_rounded,
+                color: AppColors.warning,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  average == null
+                      ? 'Pas encore évalué'
+                      : '${_ratingText(average)} / 5 sur ${summary.reviewsCount} avis',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _reputationPills(summary),
+          if (summary.wouldWorkAgainRate != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              '${summary.wouldWorkAgainRate}% des clients souhaitent retravailler avec ce profil.',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -296,6 +410,7 @@ class _BrandCreatorsScreenState extends State<BrandCreatorsScreen> {
     final image = profile?.profilePicture;
     final name = _creatorName(creator);
     final nickname = profile?.nickname?.trim();
+    final reputation = creator.reputationSummary;
 
     return InkWell(
       onTap: () => _showCreatorDetails(creator),
@@ -353,6 +468,10 @@ class _BrandCreatorsScreenState extends State<BrandCreatorsScreen> {
                       ),
                     ),
                   ],
+                  if (reputation != null) ...[
+                    const SizedBox(height: 8),
+                    _reputationPills(reputation),
+                  ],
                   const SizedBox(height: 10),
                   if (categories.isEmpty)
                     Text(
@@ -406,6 +525,7 @@ class _BrandCreatorsScreenState extends State<BrandCreatorsScreen> {
     final profile = creator.creatorProfile;
     final socialLinks = creator.socialLinks ?? const <SocialLink>[];
     final categories = creator.categories ?? const <Category>[];
+    final reputation = creator.reputationSummary;
 
     showModalBottomSheet(
       context: context,
@@ -482,6 +602,10 @@ class _BrandCreatorsScreenState extends State<BrandCreatorsScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
+                if (reputation != null) ...[
+                  _reputationPanel(reputation),
+                  const SizedBox(height: 18),
+                ],
                 _detailRow(
                   Icons.phone_outlined,
                   'Téléphone',

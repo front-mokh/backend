@@ -20,6 +20,8 @@ class UserController extends Controller
             'categories'
         ]);
 
+        $user->setAttribute('reputation_summary', $user->reputationSummary());
+
         return $user;
     }
 
@@ -59,9 +61,17 @@ class UserController extends Controller
             });
         }
 
-        return $query
+        $creators = $query
             ->latest('updated_at')
             ->limit(100)
             ->get();
+
+        $creators->each(function (User $creator) {
+            $creator->setAttribute('reputation_summary', $creator->reputationSummary());
+        });
+
+        return $creators
+            ->sortByDesc(fn (User $creator) => $creator->reputation_summary['reliability_score'])
+            ->values();
     }
 }

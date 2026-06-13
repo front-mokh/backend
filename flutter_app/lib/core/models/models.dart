@@ -35,6 +35,14 @@ int? nullableIntFromJson(dynamic value) {
   return null;
 }
 
+double? nullableDoubleFromJson(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
+}
+
 // ─── User ────────────────────────────────────────────────────
 
 class User {
@@ -50,6 +58,7 @@ class User {
   final CreatorProfile? creatorProfile;
   final List<SocialLink>? socialLinks;
   final List<Category>? categories;
+  final ReputationSummary? reputationSummary;
 
   User({
     required this.id,
@@ -64,6 +73,7 @@ class User {
     this.creatorProfile,
     this.socialLinks,
     this.categories,
+    this.reputationSummary,
   });
 
   bool get isEmailVerified => emailVerifiedAt != null;
@@ -93,6 +103,9 @@ class User {
       categories: (json['categories'] as List<dynamic>?)
           ?.map((e) => Category.fromJson(e))
           .toList(),
+      reputationSummary: json['reputation_summary'] != null
+          ? ReputationSummary.fromJson(json['reputation_summary'])
+          : null,
     );
   }
 
@@ -109,6 +122,53 @@ class User {
     'creator_profile': creatorProfile?.toJson(),
     'social_links': socialLinks?.map((e) => e.toJson()).toList(),
     'categories': categories?.map((e) => e.toJson()).toList(),
+    'reputation_summary': reputationSummary?.toJson(),
+  };
+}
+
+class ReputationSummary {
+  final double? averageRating;
+  final int reviewsCount;
+  final int completedCollaborationsCount;
+  final int? wouldWorkAgainRate;
+  final int reliabilityScore;
+  final Map<String, double?> ratingBreakdown;
+
+  ReputationSummary({
+    required this.averageRating,
+    required this.reviewsCount,
+    required this.completedCollaborationsCount,
+    required this.wouldWorkAgainRate,
+    required this.reliabilityScore,
+    required this.ratingBreakdown,
+  });
+
+  factory ReputationSummary.fromJson(Map<String, dynamic> json) {
+    final breakdown = json['rating_breakdown'] is Map
+        ? Map<String, dynamic>.from(json['rating_breakdown'])
+        : <String, dynamic>{};
+
+    return ReputationSummary(
+      averageRating: nullableDoubleFromJson(json['average_rating']),
+      reviewsCount: intFromJson(json['reviews_count']),
+      completedCollaborationsCount: intFromJson(
+        json['completed_collaborations_count'],
+      ),
+      wouldWorkAgainRate: nullableIntFromJson(json['would_work_again_rate']),
+      reliabilityScore: intFromJson(json['reliability_score']),
+      ratingBreakdown: breakdown.map(
+        (key, value) => MapEntry(key, nullableDoubleFromJson(value)),
+      ),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'average_rating': averageRating,
+    'reviews_count': reviewsCount,
+    'completed_collaborations_count': completedCollaborationsCount,
+    'would_work_again_rate': wouldWorkAgainRate,
+    'reliability_score': reliabilityScore,
+    'rating_breakdown': ratingBreakdown,
   };
 }
 
@@ -648,6 +708,86 @@ class MessagePage {
   );
 }
 
+class CollaborationReview {
+  final int id;
+  final int collaborationId;
+  final int reviewerId;
+  final int reviewedUserId;
+  final String reviewerRole;
+  final int rating;
+  final int? communicationRating;
+  final int? qualityRating;
+  final int? reliabilityRating;
+  final int? professionalismRating;
+  final bool? wouldWorkAgain;
+  final String? publicComment;
+  final String status;
+  final String createdAt;
+  final User? reviewer;
+  final User? reviewedUser;
+
+  CollaborationReview({
+    required this.id,
+    required this.collaborationId,
+    required this.reviewerId,
+    required this.reviewedUserId,
+    required this.reviewerRole,
+    required this.rating,
+    this.communicationRating,
+    this.qualityRating,
+    this.reliabilityRating,
+    this.professionalismRating,
+    this.wouldWorkAgain,
+    this.publicComment,
+    required this.status,
+    required this.createdAt,
+    this.reviewer,
+    this.reviewedUser,
+  });
+
+  factory CollaborationReview.fromJson(
+    Map<String, dynamic> json,
+  ) => CollaborationReview(
+    id: intFromJson(json['id']),
+    collaborationId: intFromJson(json['collaboration_id']),
+    reviewerId: intFromJson(json['reviewer_id']),
+    reviewedUserId: intFromJson(json['reviewed_user_id']),
+    reviewerRole: json['reviewer_role'] as String? ?? '',
+    rating: intFromJson(json['rating']),
+    communicationRating: nullableIntFromJson(json['communication_rating']),
+    qualityRating: nullableIntFromJson(json['quality_rating']),
+    reliabilityRating: nullableIntFromJson(json['reliability_rating']),
+    professionalismRating: nullableIntFromJson(json['professionalism_rating']),
+    wouldWorkAgain: json['would_work_again'] == null
+        ? null
+        : boolFromJson(json['would_work_again']),
+    publicComment: json['public_comment'] as String?,
+    status: json['status'] as String? ?? 'published',
+    createdAt: json['created_at'] as String? ?? '',
+    reviewer: json['reviewer'] != null ? User.fromJson(json['reviewer']) : null,
+    reviewedUser: json['reviewed_user'] != null
+        ? User.fromJson(json['reviewed_user'])
+        : null,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'collaboration_id': collaborationId,
+    'reviewer_id': reviewerId,
+    'reviewed_user_id': reviewedUserId,
+    'reviewer_role': reviewerRole,
+    'rating': rating,
+    'communication_rating': communicationRating,
+    'quality_rating': qualityRating,
+    'reliability_rating': reliabilityRating,
+    'professionalism_rating': professionalismRating,
+    'would_work_again': wouldWorkAgain,
+    'public_comment': publicComment,
+    'status': status,
+    'created_at': createdAt,
+  };
+}
+
 class DeliverableSubmission {
   final int id;
   final int collaborationId;
@@ -711,6 +851,8 @@ class Collaboration {
   final Application? application;
   List<Message>? messages;
   List<DeliverableSubmission>? submissions;
+  final List<CollaborationReview>? reviews;
+  final CollaborationReview? currentUserReview;
 
   Collaboration({
     required this.id,
@@ -733,6 +875,8 @@ class Collaboration {
     this.application,
     this.messages,
     this.submissions,
+    this.reviews,
+    this.currentUserReview,
   });
 
   factory Collaboration.fromJson(Map<String, dynamic> json) => Collaboration(
@@ -764,6 +908,12 @@ class Collaboration {
     submissions: (json['submissions'] as List<dynamic>?)
         ?.map((e) => DeliverableSubmission.fromJson(e))
         .toList(),
+    reviews: (json['reviews'] as List<dynamic>?)
+        ?.map((e) => CollaborationReview.fromJson(e))
+        .toList(),
+    currentUserReview: json['current_user_review'] != null
+        ? CollaborationReview.fromJson(json['current_user_review'])
+        : null,
   );
 
   Collaboration copyWith({
@@ -787,6 +937,8 @@ class Collaboration {
     Application? application,
     List<Message>? messages,
     List<DeliverableSubmission>? submissions,
+    List<CollaborationReview>? reviews,
+    CollaborationReview? currentUserReview,
   }) {
     return Collaboration(
       id: id ?? this.id,
@@ -809,6 +961,8 @@ class Collaboration {
       application: application ?? this.application,
       messages: messages ?? this.messages,
       submissions: submissions ?? this.submissions,
+      reviews: reviews ?? this.reviews,
+      currentUserReview: currentUserReview ?? this.currentUserReview,
     );
   }
 }

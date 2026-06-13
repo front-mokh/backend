@@ -22,6 +22,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - Priority 1 Flutter parity now covers creator discovery, announcement editing, application details, collaboration summary/status tabs, and search/filter headers on the main list screens.
 - Flutter push notifications now use a Firebase Cloud Messaging path with backend device-token registration, token refresh/logout cleanup, foreground local notifications, and push tap route mapping.
 - FCM code is implemented but real phone push still needs Firebase project credentials in Flutter `.env` and Laravel/VPS env before live delivery.
+- MVP reputation is now underway: completed collaborations can be reviewed by both sides, public comments/category ratings are stored, creator discovery shows reputation chips, and discovery is sorted by the computed reliability score.
 - Backend and Flutter quality checks are green.
 - React Native app in `react_native_app/mobile` is legacy reference material only; active product work is Laravel backend plus Flutter mobile.
 
@@ -87,6 +88,10 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - [x] Updated brand and creator Flutter collaboration chats to load the latest 30 messages first and load older messages on request.
 - [x] Kept realtime message append/read-receipt behavior working without re-fetching the full collaboration after every send.
 - [x] Deployed the chat-pagination backend files to the VPS, ran the message index migration, cleared caches, and restarted `celebrity_back`.
+- [x] Added `collaboration_reviews` with one review per participant per completed collaboration.
+- [x] Added backend create-review validation, review notifications, user reputation summaries, and creator discovery sorting by reliability score.
+- [x] Added Flutter review prompts/forms to brand and creator completed collaboration detail pages.
+- [x] Added public collaboration review display and creator discovery reputation chips/detail panel.
 
 ## Missing Or Stubbed Flutter Screens
 
@@ -102,10 +107,11 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 
 ## Verified
 
-- [x] `php artisan test` passes: 46 tests, 171 assertions.
+- [x] `php artisan test` passes: 52 tests, 200 assertions.
 - [x] `flutter analyze` passes with no issues.
 - [x] `flutter test` passes.
-- [x] `flutter build apk --release` passes after chat pagination.
+- [x] `flutter build apk --release` passes after MVP reviews/reputation.
+- [x] Latest `celibrity_flutter_test.apk` SHA-256: `7b0e3f228036921033a80de6ee50a7c79a027345d55f2d50823a627f570f0ade`.
 
 ## Next Session: Start Here
 
@@ -117,7 +123,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 6. Manually test Android push: foreground, background, terminated app, and tap-to-open route.
 7. Configure Apple APNs key/capability in Firebase before testing iOS push.
 8. Manually test iOS push: foreground, background, terminated app, and tap-to-open route.
-9. Start MVP product-depth work with internal creator reputation/ranking first: collaboration reviews, star/category ratings, public comments, private admin feedback, completed jobs, reliability, deliverable approvals, reports/moderation, saved creators, and creator invitations.
+9. Continue MVP product-depth work: review edit window, profile review lists, private/admin feedback, report-review flow, admin moderation, saved creators, creator invitations, and deeper reputation scoring from deliverable approval/cancellation/response-speed signals.
 
 ## Known Risks / Watch Items
 
@@ -128,16 +134,27 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - Backend feature tests should still be added for announcement creation permissions and collaboration completion permissions.
 - New `/api/creators` endpoint is intentionally brand-only and returns the first 100 onboarded creators; pagination can be added when creator volume grows.
 - Social follower counts are postponed until after the internal reputation system. MVP ranking should use marketplace behavior first; external social stats can be added later as an enrichment signal where official APIs allow it.
+- Reputation summaries are computed on demand for now. This is fine for MVP volume, but should move to aggregate queries or a materialized score table before creator volume grows.
+- Review moderation is still basic: reviews have a status field, but admin hide/restore, report review, private feedback, and edit-window flows are still pending.
 
 ## Worktree Notes
 
 - Expected new/changed files from this pass include:
   - `app/Http/Controllers/Api/CollaborationController.php`
+  - `app/Http/Controllers/Api/CollaborationReviewController.php`
+  - `app/Http/Controllers/Api/UserController.php`
+  - `app/Models/Collaboration.php`
+  - `app/Models/CollaborationReview.php`
+  - `app/Models/User.php`
   - `routes/api.php`
+  - `database/migrations/2026_06_13_000003_create_collaboration_reviews_table.php`
   - `database/migrations/2026_06_13_000002_add_cursor_index_to_messages_table.php`
+  - `tests/Feature/CollaborationReviewTest.php`
   - `tests/Feature/ChatReadTrackingTest.php`
   - `flutter_app/lib/core/models/models.dart`
   - `flutter_app/lib/core/services/api_service.dart`
+  - `flutter_app/lib/core/widgets/collaboration_review_section.dart`
+  - `flutter_app/lib/features/brand/screens/creators_screen.dart`
   - `flutter_app/lib/features/brand/screens/collaboration_details_screen.dart`
   - `flutter_app/lib/features/creator/screens/creator_collaboration_details_screen.dart`
   - `docs/flutter_parity_todo.md`

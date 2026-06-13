@@ -382,9 +382,29 @@ class CollaborationController extends Controller
             'creator.creatorProfile',
             'application',
             'submissions.deliverableType',
+            'reviews.reviewer.brandProfile',
+            'reviews.reviewer.creatorProfile',
+            'reviews.reviewedUser.brandProfile',
+            'reviews.reviewedUser.creatorProfile',
         ]);
 
         $collaboration->unread_count = $collaboration->unreadCountFor($user);
+        $collaboration->current_user_review = $collaboration->reviews
+            ->firstWhere('reviewer_id', $user->id);
+
+        if ($collaboration->brand) {
+            $collaboration->brand->setAttribute(
+                'reputation_summary',
+                $collaboration->brand->reputationSummary()
+            );
+        }
+
+        if ($collaboration->creator) {
+            $collaboration->creator->setAttribute(
+                'reputation_summary',
+                $collaboration->creator->reputationSummary()
+            );
+        }
 
         return $collaboration;
     }

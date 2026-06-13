@@ -575,6 +575,14 @@ class ApiService {
     return Collaboration.fromJson(response.data);
   }
 
+  Future<CollaborationReview> submitCollaborationReview(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await _dio.post('/collaborations/$id/reviews', data: data);
+    return CollaborationReview.fromJson(response.data);
+  }
+
   Future<Message> sendCollaborationMessage(int id, FormData formData) async {
     final response = await _dio.post(
       '/collaborations/$id/messages',

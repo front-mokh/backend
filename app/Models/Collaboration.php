@@ -95,4 +95,9 @@ class Collaboration extends Model
     {
         return $this->hasMany(DeliverableSubmission::class);
     }
+
+    public function reviews()
+    {
+        return $this->hasMany(CollaborationReview::class)->latest();
+    }
 }

@@ -49,6 +49,7 @@
 - Added user-visible realtime reconnection feedback in the brand and creator Flutter shells.
 - Added robust no-cost Firebase Cloud Messaging push infrastructure for Flutter: backend device-token table, token registration/removal endpoints, FCM HTTP v1 sender, Flutter token sync, foreground notifications, tap route mapping, and Android notification permission/channel setup.
 - Added cursor-paginated collaboration message history so Flutter opens chats on the latest messages and loads older messages only on request.
+- Added MVP collaboration reviews and initial internal reputation ranking: backend review table/API, one review per completed collaboration per participant, 1-5 global/category ratings, public comments, review notifications, reputation summaries, creator discovery ranking, Flutter completed-collaboration review prompts, and public review display.
 
 ## Missing Or Stubbed Flutter Pages
 
@@ -107,21 +108,30 @@
 ## Priority 3: MVP Product Functionality
 
 - Creator reputation and ranking:
-  - [ ] Add a `collaboration_reviews` backend table with collaboration id, reviewer id, reviewed user id, reviewer role, 1-5 rating, public comment, private feedback, review status, moderation fields, and timestamps.
-  - [ ] Allow each side to leave one review per completed collaboration: brand reviews creator, creator reviews brand.
-  - [ ] Add required 1-5 star rating and optional public comment after collaboration completion.
+  - [x] Add a `collaboration_reviews` backend table with collaboration id, reviewer id, reviewed user id, reviewer role, 1-5 rating, public comment, review status, category ratings, and timestamps.
+  - [x] Allow each side to leave one review per completed collaboration: brand reviews creator, creator reviews brand.
+  - [x] Add required 1-5 star rating and optional public comment after collaboration completion.
   - [ ] Add optional private feedback visible only to admins for moderation/product quality.
-  - [ ] Add review categories for richer ranking: communication, quality, deadline/reliability, professionalism, and would-work-again.
-  - [ ] Add backend review endpoints: create review, update within a short edit window, list reviews for a creator/brand profile, and admin hide/restore review.
-  - [ ] Add Flutter review prompt when a collaboration is completed and a review is still missing.
-  - [ ] Add Flutter review form with star rating, category ratings, public comment, private feedback, and submit confirmation.
-  - [ ] Add review summaries on creator and brand profiles: average rating, review count, latest comments, completed jobs, and reliability badge.
-  - [ ] Add review notifications: remind reviewer after completion, notify reviewed user when a public review is published, notify admins when a review is reported.
+  - [ ] Add moderation fields and admin hide/restore controls for reviews.
+  - [x] Add review categories for richer ranking: communication, quality, deadline/reliability, professionalism, and would-work-again.
+  - [x] Add backend create-review endpoint with participant/completed/duplicate-review validation.
+  - [ ] Add backend review update within a short edit window.
+  - [ ] Add backend list-review endpoints for creator/brand profile pages.
+  - [x] Add Flutter review prompt when a collaboration is completed and a review is still missing.
+  - [x] Add Flutter review form with star rating, category ratings, public comment, and submit confirmation.
+  - [ ] Add private admin feedback to the Flutter/backend review form after admin moderation exists.
+  - [x] Add review summaries on returned users: average rating, review count, completed jobs, would-work-again rate, rating breakdown, and reliability score.
+  - [x] Surface creator average rating, completed-collaboration count, and reliability score in brand creator discovery/detail views.
+  - [x] Show public collaboration review comments inside completed collaboration details.
+  - [x] Notify reviewed user when a public review is published.
+  - [ ] Add review reminder notifications after completion.
+  - [ ] Notify admins when a review is reported.
   - [ ] Add report review flow so users can flag abusive/fake comments.
-  - [ ] Add a `creator_reputation_scores` backend table or computed materialized model for completed jobs, average rating, review count, approval rate, revision rate, cancellation rate, response speed, recent activity, and score version.
-  - [ ] Calculate a creator ranking score from internal marketplace behavior first: completed collaborations, ratings, review quality, deliverable approval rate, reliability, and recency.
-  - [ ] Surface average rating, completed-collaboration count, and reliability badge on public creator profiles.
-  - [ ] Sort brand creator discovery by recommended/ranking score, with filters for rating, completed jobs, category, platform, location, and availability.
+  - [x] Add an initial computed reputation summary for completed jobs, average rating, review count, category averages, would-work-again rate, and reliability score.
+  - [ ] Add a `creator_reputation_scores` backend table or computed materialized model for approval rate, revision rate, cancellation rate, response speed, recent activity, and score version.
+  - [ ] Expand the creator ranking score with deliverable approval rate, cancellation rate, response speed, reliability, and recency.
+  - [x] Sort brand creator discovery by the computed reliability score.
+  - [ ] Add creator discovery filters for rating, completed jobs, category, platform, location, and availability.
   - [ ] Add admin controls to inspect/override suspicious reputation scores, moderate comments, and hide abusive reviews.
 - Safety and moderation:
   - [ ] Add report-user/report-collaboration flow.
@@ -189,9 +199,10 @@
 ## Current Verification
 
 - Latest full pass, 2026-06-13:
-  - `php artisan test`: passing, 46 tests / 171 assertions.
+  - `php artisan test`: passing, 52 tests / 200 assertions.
   - `flutter analyze`: passing with no issues.
   - `flutter test`: passing.
-- Latest APK build after chat pagination, 2026-06-13:
+- Latest APK build after MVP reviews/reputation, 2026-06-13:
   - `flutter build apk --release`: passing.
   - Test APK copied to `celibrity_flutter_test.apk`.
+  - SHA-256: `7b0e3f228036921033a80de6ee50a7c79a027345d55f2d50823a627f570f0ade`.

@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_status.dart';
 import '../../../core/utils/file_utils.dart';
 import '../../../core/widgets/attachment_preview.dart';
+import '../../../core/widgets/collaboration_review_section.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/services/websocket_service.dart';
@@ -283,6 +284,16 @@ class _State extends State<BrandCollaborationDetailsScreen> {
     } finally {
       if (mounted) setState(() => _isCompleting = false);
     }
+  }
+
+  Future<void> _submitReview(Map<String, dynamic> payload) async {
+    final currentMessages = _collaboration?.messages;
+    await ApiService().submitCollaborationReview(widget.id, payload);
+    final updated = await ApiService().getCollaboration(widget.id);
+    if (!mounted) return;
+    setState(() {
+      _collaboration = updated.copyWith(messages: currentMessages);
+    });
   }
 
   Future<void> _markAsRead() async {
@@ -606,7 +617,12 @@ class _State extends State<BrandCollaborationDetailsScreen> {
       color: AppColors.primary,
       onRefresh: _load,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          MediaQuery.of(context).padding.bottom + 16,
+        ),
         children: [
           Container(
             padding: const EdgeInsets.all(16),
@@ -660,6 +676,14 @@ class _State extends State<BrandCollaborationDetailsScreen> {
               'Date de fin',
               collaboration.completedAt!,
             ),
+          if (collaboration.status == 'completed') ...[
+            const SizedBox(height: 8),
+            CollaborationReviewSection(
+              collaboration: collaboration,
+              reviewedName: creator?.fullName ?? 'ce créateur',
+              onSubmit: _submitReview,
+            ),
+          ],
           const SizedBox(height: 16),
           if (!_isCollaborationLocked)
             SizedBox(

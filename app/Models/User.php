@@ -125,6 +125,63 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Collaboration::class, 'creator_id');
     }
 
+    public function reviewsGiven()
+    {
+        return $this->hasMany(CollaborationReview::class, 'reviewer_id');
+    }
+
+    public function reviewsReceived()
+    {
+        return $this->hasMany(CollaborationReview::class, 'reviewed_user_id');
+    }
+
+    public function reputationSummary(): array
+    {
+        $publishedReviews = $this->reviewsReceived()->published();
+        $reviewsCount = (clone $publishedReviews)->count();
+        $averageRating = $reviewsCount > 0
+            ? round((float) (clone $publishedReviews)->avg('rating'), 1)
+            : null;
+
+        $wouldWorkAgainCount = (clone $publishedReviews)
+            ->where('would_work_again', true)
+            ->count();
+
+        $completedCollaborationsCount = $this->isCreator()
+            ? $this->collaborationsAsCreator()->where('status', 'completed')->count()
+            : $this->collaborationsAsBrand()->where('status', 'completed')->count();
+
+        $ratingScore = $averageRating === null ? 0 : ($averageRating / 5) * 70;
+        $completionScore = (min($completedCollaborationsCount, 10) / 10) * 20;
+        $repeatScore = $reviewsCount === 0 ? 0 : ($wouldWorkAgainCount / $reviewsCount) * 10;
+
+        return [
+            'average_rating' => $averageRating,
+            'reviews_count' => $reviewsCount,
+            'completed_collaborations_count' => $completedCollaborationsCount,
+            'would_work_again_rate' => $reviewsCount === 0
+                ? null
+                : (int) round(($wouldWorkAgainCount / $reviewsCount) * 100),
+            'reliability_score' => (int) round($ratingScore + $completionScore + $repeatScore),
+            'rating_breakdown' => [
+                'communication' => $this->averageReviewMetric('communication_rating'),
+                'quality' => $this->averageReviewMetric('quality_rating'),
+                'reliability' => $this->averageReviewMetric('reliability_rating'),
+                'professionalism' => $this->averageReviewMetric('professionalism_rating'),
+            ],
+        ];
+    }
+
+    private function averageReviewMetric(string $column): ?float
+    {
+        $average = $this->reviewsReceived()
+            ->published()
+            ->whereNotNull($column)
+            ->avg($column);
+
+        return $average === null ? null : round((float) $average, 1);
+    }
+
     public function messages()
     {
         return $this->hasMany(Message::class, 'sender_id');
