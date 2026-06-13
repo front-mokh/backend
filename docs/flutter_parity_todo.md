@@ -41,6 +41,12 @@
 - Added platform names to submitted deliverable titles and made candidature announcement cards open their announcement details.
 - Standardized key backend response payloads for announcements, applications, collaborations, and submission status updates.
 - Hid Expo push tokens from serialized user responses and added response-contract tests for mobile-critical payloads.
+- Added shared Flutter loading, empty, error, and refreshable state widgets for primary list screens.
+- Added visible retry/error handling and pull-to-refresh for empty/error states in brand announcements, creator announcements, creator applications, brand/creator collaborations, brand creator discovery, and notifications.
+- Standardized Flutter status labels/colors for announcements, applications, collaborations, and deliverable submissions.
+- Added richer attachment previews for images, PDFs, videos, and generic files in chat, announcement details, and deliverable details.
+- Added pre-upload size validation for onboarding images, announcement thumbnails/PDFs, chat attachments, and deliverable submission attachments.
+- Added user-visible realtime reconnection feedback in the brand and creator Flutter shells.
 
 ## Missing Or Stubbed Flutter Pages
 
@@ -90,13 +96,13 @@
 
 ## Priority 3: UX And Mobile Polish
 
-- Add loading, empty, and error states for every list screen.
-- Add pull-to-refresh on list-heavy screens.
+- [x] Add loading, empty, and error states for primary list screens.
+- [x] Add pull-to-refresh on list-heavy screens, including empty/error states.
 - Add pagination/infinite scrolling where backend responses support it.
-- Standardize status labels and colors across announcements, applications, collaborations, and submissions.
-- Improve attachment previews for PDF/video files.
-- Add image/file size validation feedback before upload.
-- Add offline/network failure messaging for API and websocket failures.
+- [x] Standardize status labels and colors across announcements, applications, collaborations, and submissions.
+- [x] Improve attachment previews for PDF/video files.
+- [x] Add image/file size validation feedback before upload.
+- [x] Add offline/network failure messaging for API and websocket failures.
 
 ## Priority 4: Backend/API Hardening
 
@@ -125,5 +131,6 @@
   - `php artisan test`: passing, 40 tests / 139 assertions.
   - `flutter analyze`: passing with no issues.
   - `flutter test`: passing.
-- Latest APK build before backend-only response pass:
+- Latest APK build after Priority 3 polish pass, 2026-06-13:
   - `flutter build apk --release`: passing.
+  - Test APK copied to `celibrity_flutter_test.apk`.

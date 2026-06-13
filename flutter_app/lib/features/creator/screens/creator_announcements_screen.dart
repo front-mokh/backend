@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_state_widgets.dart';
 
 class CreatorAnnouncementsScreen extends StatefulWidget {
   const CreatorAnnouncementsScreen({super.key});
@@ -18,6 +19,7 @@ class _State extends State<CreatorAnnouncementsScreen> {
   List<Announcement> _announcements = [];
   List<Category> _categories = [];
   bool _isLoading = true;
+  String? _errorMessage;
   int? _selectedCategoryId;
 
   @override
@@ -32,8 +34,13 @@ class _State extends State<CreatorAnnouncementsScreen> {
     super.dispose();
   }
 
-  Future<void> _load() async {
-    if (mounted) setState(() => _isLoading = true);
+  Future<void> _load({bool showLoading = true}) async {
+    if (showLoading && mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
     try {
       final results = await Future.wait([
         ApiService().getOpenAnnouncements(),
@@ -44,10 +51,16 @@ class _State extends State<CreatorAnnouncementsScreen> {
           _announcements = results[0] as List<Announcement>;
           _categories = results[1] as List<Category>;
           _isLoading = false;
+          _errorMessage = null;
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = ApiService.messageFromError(e);
+        });
+      }
     }
   }
 
@@ -81,36 +94,52 @@ class _State extends State<CreatorAnnouncementsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            )
+          ? const AppLoadingState()
           : Column(
               children: [
                 _buildHeader(),
-                Expanded(
-                  child: _announcements.isEmpty
-                      ? _emptyState(
-                          'Aucune annonce disponible',
-                          'Revenez plus tard pour de nouvelles opportunités',
-                        )
-                      : _filteredAnnouncements.isEmpty
-                      ? _emptyState(
-                          'Aucun résultat',
-                          'Aucune annonce ne correspond aux filtres',
-                        )
-                      : RefreshIndicator(
-                          color: AppColors.primary,
-                          onRefresh: _load,
-                          child: ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _filteredAnnouncements.length,
-                            itemBuilder: (_, i) =>
-                                _buildCard(_filteredAnnouncements[i]),
-                          ),
-                        ),
-                ),
+                Expanded(child: _buildBodyState()),
               ],
             ),
+    );
+  }
+
+  Widget _buildBodyState() {
+    if (_errorMessage != null && _announcements.isEmpty) {
+      return AppRefreshableState(
+        onRefresh: () => _load(showLoading: false),
+        child: AppErrorState(message: _errorMessage!, onRetry: () => _load()),
+      );
+    }
+
+    if (_announcements.isEmpty) {
+      return AppRefreshableState(
+        onRefresh: () => _load(showLoading: false),
+        child: _emptyState(
+          'Aucune annonce disponible',
+          'Revenez plus tard pour de nouvelles opportunités',
+        ),
+      );
+    }
+
+    if (_filteredAnnouncements.isEmpty) {
+      return AppRefreshableState(
+        onRefresh: () => _load(showLoading: false),
+        child: _emptyState(
+          'Aucun résultat',
+          'Aucune annonce ne correspond aux filtres',
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () => _load(showLoading: false),
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        itemCount: _filteredAnnouncements.length,
+        itemBuilder: (_, i) => _buildCard(_filteredAnnouncements[i]),
+      ),
     );
   }
 

@@ -8,6 +8,13 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'api_service.dart';
 
+enum WebSocketConnectionStatus {
+  disconnected,
+  connecting,
+  connected,
+  reconnecting,
+}
+
 class WebSocketService {
   static final WebSocketService _instance = WebSocketService._internal();
   factory WebSocketService() => _instance;
@@ -29,12 +36,18 @@ class WebSocketService {
       StreamController<Map<String, dynamic>>.broadcast();
   final _readReceiptController =
       StreamController<Map<String, dynamic>>.broadcast();
+  final _connectionStatusController =
+      StreamController<WebSocketConnectionStatus>.broadcast();
+  WebSocketConnectionStatus _connectionStatus =
+      WebSocketConnectionStatus.disconnected;
 
   Stream<Map<String, dynamic>> get messages => _messageController.stream;
   Stream<Map<String, dynamic>> get notifications =>
       _notificationController.stream;
   Stream<Map<String, dynamic>> get readReceipts =>
       _readReceiptController.stream;
+  Stream<WebSocketConnectionStatus> get connectionStatus =>
+      _connectionStatusController.stream;
 
   Function(Map<String, dynamic>)? onMessageReceived;
   Function(Map<String, dynamic>)? onNotificationReceived;
@@ -64,6 +77,11 @@ class WebSocketService {
     );
 
     try {
+      _emitConnectionStatus(
+        _reconnectAttempts > 0
+            ? WebSocketConnectionStatus.reconnecting
+            : WebSocketConnectionStatus.connecting,
+      );
       debugPrint('WebSocket connecting to $uri');
       _channel = WebSocketChannel.connect(uri);
       _subscription = _channel!.stream.listen(
@@ -231,6 +249,7 @@ class WebSocketService {
     _socketId = decoded?['socket_id']?.toString();
     ApiService().setSocketId(_socketId);
     _reconnectAttempts = 0;
+    _emitConnectionStatus(WebSocketConnectionStatus.connected);
     debugPrint('WebSocket connected with socket id $_socketId');
 
     final channels = <String>{
@@ -290,7 +309,18 @@ class WebSocketService {
     ApiService().setSocketId(null);
     _pendingPrivateChannels.addAll(_channelReferences.keys);
     _subscribedChannels.clear();
+    _emitConnectionStatus(
+      _channelReferences.isEmpty
+          ? WebSocketConnectionStatus.disconnected
+          : WebSocketConnectionStatus.reconnecting,
+    );
     _scheduleReconnect();
+  }
+
+  void _emitConnectionStatus(WebSocketConnectionStatus status) {
+    if (_connectionStatus == status) return;
+    _connectionStatus = status;
+    _connectionStatusController.add(status);
   }
 
   void _scheduleReconnect() {

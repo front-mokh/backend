@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_status.dart';
+import '../../../core/widgets/attachment_preview.dart';
 
 class CreatorAnnouncementDetailsScreen extends StatefulWidget {
   final int id;
@@ -597,34 +599,9 @@ class _State extends State<CreatorAnnouncementDetailsScreen> {
       onTap: () =>
           launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
       borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border, width: 0.5),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.attach_file, color: AppColors.primary),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Consulter la pièce jointe',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.text,
-                ),
-              ),
-            ),
-            const Icon(
-              Icons.open_in_new,
-              size: 18,
-              color: AppColors.textTertiary,
-            ),
-          ],
-        ),
+      child: SizedBox(
+        width: double.infinity,
+        child: AppAttachmentPreview(source: url, imageHeight: 160),
       ),
     );
   }
@@ -763,17 +740,18 @@ class _State extends State<CreatorAnnouncementDetailsScreen> {
     return deadline.isBefore(today);
   }
 
+  String _effectiveStatus(Announcement announcement) {
+    if (announcement.status != 'open') return 'closed';
+    if (_isExpired(announcement.deadline)) return 'expired';
+    return 'open';
+  }
+
   String _statusLabel(Announcement announcement) {
-    if (announcement.status != 'open') return 'Clôturée';
-    if (_isExpired(announcement.deadline)) return 'Expirée';
-    return 'Ouverte';
+    return AppStatus.announcementLabel(_effectiveStatus(announcement));
   }
 
   Color _statusColor(Announcement announcement) {
-    if (announcement.status != 'open' || _isExpired(announcement.deadline)) {
-      return AppColors.warning;
-    }
-    return AppColors.success;
+    return AppStatus.announcementColor(_effectiveStatus(announcement));
   }
 
   String _formatDate(String value) {

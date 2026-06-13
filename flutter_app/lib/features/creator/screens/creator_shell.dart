@@ -22,6 +22,7 @@ class _CreatorShellState extends State<CreatorShell> {
   int _unreadNotifications = 0;
   bool _notificationSocketStarted = false;
   Timer? _notificationPollTimer;
+  StreamSubscription<WebSocketConnectionStatus>? _socketStatusSubscription;
 
   static const _tabs = [
     '/creator/announcements',
@@ -46,6 +47,14 @@ class _CreatorShellState extends State<CreatorShell> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _socketStatusSubscription = WebSocketService().connectionStatus.listen(
+      _handleSocketStatus,
+    );
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final location = GoRouterState.of(context).uri.path;
@@ -57,7 +66,33 @@ class _CreatorShellState extends State<CreatorShell> {
   @override
   void dispose() {
     _notificationPollTimer?.cancel();
+    _socketStatusSubscription?.cancel();
     super.dispose();
+  }
+
+  void _handleSocketStatus(WebSocketConnectionStatus status) {
+    if (!mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    if (status == WebSocketConnectionStatus.reconnecting) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'Connexion temps réel interrompue. Reconnexion...',
+              style: GoogleFonts.inter(color: Colors.white),
+            ),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      return;
+    }
+
+    if (status == WebSocketConnectionStatus.connected) {
+      messenger.hideCurrentSnackBar();
+    }
   }
 
   void _setupNotificationBadge() {

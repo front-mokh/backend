@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/file_utils.dart';
 
 class CreateAnnouncementScreen extends StatefulWidget {
   final int? announcementId;
@@ -157,6 +158,18 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
       imageQuality: 80,
     );
     if (image != null) {
+      final sizeError = AppFileUtils.sizeError(
+        bytes: await image.length(),
+        maxBytes: AppFileUtils.maxImageBytes,
+        subject: 'Cette image',
+      );
+      if (sizeError != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(sizeError), backgroundColor: AppColors.error),
+        );
+        return;
+      }
       setState(() => _thumbnailPath = image.path);
     }
   }
@@ -167,6 +180,18 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
       allowedExtensions: ['pdf'],
     );
     if (result != null && result.files.single.path != null) {
+      final sizeError = AppFileUtils.sizeError(
+        bytes: result.files.single.size,
+        maxBytes: AppFileUtils.maxDocumentBytes,
+        subject: 'Ce PDF',
+      );
+      if (sizeError != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(sizeError), backgroundColor: AppColors.error),
+        );
+        return;
+      }
       setState(() => _attachmentPath = result.files.single.path!);
     }
   }
@@ -851,7 +876,9 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    _attachmentPath?.split('/').last ?? 'Ajouter un document',
+                    _attachmentPath == null
+                        ? 'Ajouter un document'
+                        : AppFileUtils.displayName(_attachmentPath!),
                     style: GoogleFonts.inter(
                       color: _attachmentPath != null
                           ? AppColors.text

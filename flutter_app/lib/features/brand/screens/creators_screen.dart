@@ -9,6 +9,7 @@ import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/social_utils.dart';
+import '../../../core/widgets/app_state_widgets.dart';
 
 class BrandCreatorsScreen extends StatefulWidget {
   const BrandCreatorsScreen({super.key});
@@ -23,6 +24,7 @@ class _BrandCreatorsScreenState extends State<BrandCreatorsScreen> {
   List<User> _creators = [];
   List<Category> _categories = [];
   bool _isLoading = true;
+  String? _errorMessage;
   int? _selectedCategoryId;
 
   @override
@@ -39,7 +41,10 @@ class _BrandCreatorsScreenState extends State<BrandCreatorsScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final results = await Future.wait([
         ApiService().getCategories(),
@@ -50,14 +55,25 @@ class _BrandCreatorsScreenState extends State<BrandCreatorsScreen> {
         _categories = results[0] as List<Category>;
         _creators = results[1] as List<User>;
         _isLoading = false;
+        _errorMessage = null;
       });
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = ApiService.messageFromError(e);
+        });
+      }
     }
   }
 
   Future<void> _loadCreators({bool showLoading = false}) async {
-    if (showLoading && mounted) setState(() => _isLoading = true);
+    if (showLoading && mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
     try {
       final creators = await ApiService().getCreators(
         search: _searchController.text,
@@ -67,9 +83,15 @@ class _BrandCreatorsScreenState extends State<BrandCreatorsScreen> {
       setState(() {
         _creators = creators;
         _isLoading = false;
+        _errorMessage = null;
       });
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = ApiService.messageFromError(e);
+        });
+      }
     }
   }
 
@@ -168,24 +190,38 @@ class _BrandCreatorsScreenState extends State<BrandCreatorsScreen> {
             ),
           ),
           Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  )
-                : _creators.isEmpty
-                ? _emptyState()
-                : RefreshIndicator(
-                    color: AppColors.primary,
-                    onRefresh: () => _loadCreators(),
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _creators.length,
-                      itemBuilder: (context, index) =>
-                          _creatorCard(_creators[index]),
-                    ),
-                  ),
+            child: _isLoading ? const AppLoadingState() : _buildBodyState(),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBodyState() {
+    if (_errorMessage != null && _creators.isEmpty) {
+      return AppRefreshableState(
+        onRefresh: _loadInitialData,
+        child: AppErrorState(
+          message: _errorMessage!,
+          onRetry: () => _loadInitialData(),
+        ),
+      );
+    }
+
+    if (_creators.isEmpty) {
+      return AppRefreshableState(
+        onRefresh: () => _loadCreators(),
+        child: _emptyState(),
+      );
+    }
+
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () => _loadCreators(),
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        itemCount: _creators.length,
+        itemBuilder: (context, index) => _creatorCard(_creators[index]),
       ),
     );
   }

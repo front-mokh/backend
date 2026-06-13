@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_status.dart';
+import '../../../core/widgets/attachment_preview.dart';
 
 class BrandAnnouncementDetailsScreen extends StatefulWidget {
   final int id;
@@ -223,20 +225,14 @@ class _BrandAnnouncementDetailsScreenState
                           height: 8,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: _announcement!.status == 'open'
-                                ? Colors.green
-                                : _announcement!.status == 'closed'
-                                ? Colors.red
-                                : Colors.grey,
+                            color: AppStatus.announcementColor(
+                              _announcement!.status,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          _announcement!.status == 'open'
-                              ? 'Ouverte'
-                              : _announcement!.status == 'closed'
-                              ? 'Fermée'
-                              : _announcement!.status,
+                          AppStatus.announcementLabel(_announcement!.status),
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
@@ -612,12 +608,16 @@ class _BrandAnnouncementDetailsScreenState
 
           if (_announcement!.attachment != null) ...[
             _buildSectionTitle('Document joint'),
-            _buildInfoCard(
-              Icons.attach_file,
-              'Brief de campagne',
-              'Appuyez pour ouvrir le document',
-              AppColors.primary,
+            InkWell(
               onTap: _openAttachment,
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: double.infinity,
+                child: AppAttachmentPreview(
+                  source: _announcement!.attachment!,
+                  imageHeight: 160,
+                ),
+              ),
             ),
             const SizedBox(height: 24),
           ],
@@ -698,7 +698,7 @@ class _BrandAnnouncementDetailsScreenState
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  app.status.toUpperCase(),
+                  AppStatus.applicationLabel(app.status),
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -714,14 +714,7 @@ class _BrandAnnouncementDetailsScreenState
   }
 
   Color _getStatusColor(String status) {
-    switch (status) {
-      case 'accepted':
-        return Colors.green;
-      case 'rejected':
-        return Colors.red;
-      default:
-        return Colors.orange;
-    }
+    return AppStatus.applicationColor(status);
   }
 
   Widget _buildSectionTitle(String title) {

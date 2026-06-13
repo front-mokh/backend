@@ -46,6 +46,24 @@ class ApiService {
     return 'Une erreur est survenue. Veuillez réessayer.';
   }
 
+  static String messageFromError(Object error) {
+    if (error is DioException) return errorMessage(error);
+    if (error is FormatException || error is TypeError) {
+      return 'Réponse du serveur invalide. Veuillez réessayer.';
+    }
+
+    final message = error.toString();
+    if (message.contains('is not a subtype') || message.startsWith('type ')) {
+      return 'Réponse du serveur invalide. Veuillez réessayer.';
+    }
+
+    if (message.isNotEmpty && !message.startsWith('Exception:')) {
+      return message;
+    }
+
+    return 'Une erreur est survenue. Veuillez réessayer.';
+  }
+
   ApiService._internal() {
     final apiUrl = dotenv.env['API_URL'] ?? 'http://72.62.20.218:8009/api';
     _dio = Dio(

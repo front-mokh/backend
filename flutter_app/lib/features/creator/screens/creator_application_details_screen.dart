@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_status.dart';
 
 class CreatorApplicationDetailsScreen extends StatefulWidget {
   final int id;
@@ -42,28 +43,11 @@ class _CreatorApplicationDetailsScreenState
   }
 
   String _statusLabel(String status) {
-    switch (status) {
-      case 'accepted':
-        return 'Acceptée';
-      case 'rejected':
-        return 'Refusée';
-      case 'withdrawn':
-        return 'Retirée';
-      default:
-        return 'En attente';
-    }
+    return AppStatus.applicationLabel(status);
   }
 
   Color _statusColor(String status) {
-    switch (status) {
-      case 'accepted':
-        return AppColors.success;
-      case 'rejected':
-      case 'withdrawn':
-        return AppColors.error;
-      default:
-        return AppColors.warning;
-    }
+    return AppStatus.applicationColor(status);
   }
 
   String _formatDate(String value) {

@@ -5,6 +5,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_status.dart';
+import '../../../core/widgets/app_state_widgets.dart';
 
 class BrandAnnouncementsScreen extends StatefulWidget {
   const BrandAnnouncementsScreen({super.key});
@@ -18,6 +20,7 @@ class _BrandAnnouncementsScreenState extends State<BrandAnnouncementsScreen> {
   final _searchController = TextEditingController();
   List<Announcement> _announcements = [];
   bool _isLoading = true;
+  String? _errorMessage;
   String _statusFilter = 'all';
 
   @override
@@ -32,18 +35,29 @@ class _BrandAnnouncementsScreenState extends State<BrandAnnouncementsScreen> {
     super.dispose();
   }
 
-  Future<void> _loadAnnouncements() async {
-    if (mounted) setState(() => _isLoading = true);
+  Future<void> _loadAnnouncements({bool showLoading = true}) async {
+    if (showLoading && mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
     try {
       final data = await ApiService().getMyAnnouncements();
       if (mounted) {
         setState(() {
           _announcements = data;
           _isLoading = false;
+          _errorMessage = null;
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = ApiService.messageFromError(e);
+        });
+      }
     }
   }
 
@@ -88,37 +102,11 @@ class _BrandAnnouncementsScreenState extends State<BrandAnnouncementsScreen> {
   }
 
   Color _statusColor(String status) {
-    switch (status) {
-      case 'open':
-        return AppColors.success;
-      case 'closed':
-        return AppColors.error;
-      case 'expired':
-        return AppColors.warning;
-      case 'in_progress':
-        return AppColors.warning;
-      case 'completed':
-        return AppColors.info;
-      default:
-        return AppColors.textTertiary;
-    }
+    return AppStatus.announcementColor(status);
   }
 
   String _statusLabel(String status) {
-    switch (status) {
-      case 'open':
-        return 'Ouvert';
-      case 'closed':
-        return 'Fermé';
-      case 'expired':
-        return 'Expiré';
-      case 'in_progress':
-        return 'En cours';
-      case 'completed':
-        return 'Terminé';
-      default:
-        return status;
-    }
+    return AppStatus.announcementLabel(status);
   }
 
   @override
@@ -141,32 +129,50 @@ class _BrandAnnouncementsScreenState extends State<BrandAnnouncementsScreen> {
         ),
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            )
+          ? const AppLoadingState()
           : Column(
               children: [
                 _buildHeader(),
-                Expanded(
-                  child: _announcements.isEmpty
-                      ? _buildEmptyState()
-                      : _filteredAnnouncements.isEmpty
-                      ? _buildNoResultsState()
-                      : RefreshIndicator(
-                          color: AppColors.primary,
-                          onRefresh: _loadAnnouncements,
-                          child: ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _filteredAnnouncements.length,
-                            itemBuilder: (context, index) =>
-                                _buildAnnouncementCard(
-                                  _filteredAnnouncements[index],
-                                ),
-                          ),
-                        ),
-                ),
+                Expanded(child: _buildBodyState()),
               ],
             ),
+    );
+  }
+
+  Widget _buildBodyState() {
+    if (_errorMessage != null && _announcements.isEmpty) {
+      return AppRefreshableState(
+        onRefresh: () => _loadAnnouncements(showLoading: false),
+        child: AppErrorState(
+          message: _errorMessage!,
+          onRetry: () => _loadAnnouncements(),
+        ),
+      );
+    }
+
+    if (_announcements.isEmpty) {
+      return AppRefreshableState(
+        onRefresh: () => _loadAnnouncements(showLoading: false),
+        child: _buildEmptyState(),
+      );
+    }
+
+    if (_filteredAnnouncements.isEmpty) {
+      return AppRefreshableState(
+        onRefresh: () => _loadAnnouncements(showLoading: false),
+        child: _buildNoResultsState(),
+      );
+    }
+
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () => _loadAnnouncements(showLoading: false),
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        itemCount: _filteredAnnouncements.length,
+        itemBuilder: (context, index) =>
+            _buildAnnouncementCard(_filteredAnnouncements[index]),
+      ),
     );
   }
 

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'dart:io';
 import '../../../../core/providers/onboarding_provider.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/file_utils.dart';
 import '../../widgets/onboarding_exit_button.dart';
 
 class CreatorInfoScreen extends StatefulWidget {
@@ -81,6 +82,18 @@ class _CreatorInfoScreenState extends State<CreatorInfoScreen> {
       imageQuality: 80,
     );
     if (image != null) {
+      final sizeError = AppFileUtils.sizeError(
+        bytes: await image.length(),
+        maxBytes: AppFileUtils.maxImageBytes,
+        subject: 'Cette image',
+      );
+      if (sizeError != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(sizeError), backgroundColor: AppColors.error),
+        );
+        return;
+      }
       if (!mounted) return;
       setState(() => _profilePicturePath = image.path);
       context.read<OnboardingProvider>().updateCreatorInfo(

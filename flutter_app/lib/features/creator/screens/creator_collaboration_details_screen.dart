@@ -9,6 +9,9 @@ import '../../../core/models/models.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_status.dart';
+import '../../../core/utils/file_utils.dart';
+import '../../../core/widgets/attachment_preview.dart';
 import '../../../core/services/websocket_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
@@ -124,31 +127,11 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
   }
 
   String _statusLabel(String status) {
-    switch (status) {
-      case 'completed':
-        return 'Terminée';
-      case 'cancelled':
-        return 'Annulée';
-      case 'active':
-      case 'in_progress':
-        return 'En cours';
-      default:
-        return status;
-    }
+    return AppStatus.collaborationLabel(status);
   }
 
   Color _statusColor(String status) {
-    switch (status) {
-      case 'completed':
-        return AppColors.success;
-      case 'cancelled':
-        return AppColors.error;
-      case 'active':
-      case 'in_progress':
-        return AppColors.warning;
-      default:
-        return AppColors.textSecondary;
-    }
+    return AppStatus.collaborationColor(status);
   }
 
   Future<void> _markAsRead() async {
@@ -242,11 +225,24 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
     if (result == null || result.files.single.path == null) return;
 
     try {
-      final path = result.files.single.path!;
+      final pickedFile = result.files.single;
+      final sizeError = AppFileUtils.sizeError(
+        bytes: pickedFile.size,
+        maxBytes: AppFileUtils.maxUploadBytes,
+      );
+      if (sizeError != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(sizeError), backgroundColor: AppColors.error),
+        );
+        return;
+      }
+
+      final path = pickedFile.path!;
       final formData = FormData.fromMap({
         'attachment': await MultipartFile.fromFile(
           path,
-          filename: result.files.single.name,
+          filename: pickedFile.name,
         ),
       });
       await ApiService().sendCollaborationMessage(widget.id, formData);
@@ -261,13 +257,6 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
         );
       }
     }
-  }
-
-  bool _isImageUrl(String url) {
-    return RegExp(
-      r'\.(jpg|jpeg|png|gif|webp|bmp)(\?.*)?$',
-      caseSensitive: false,
-    ).hasMatch(url);
   }
 
   Future<void> _openAttachment(String url) async {
@@ -516,53 +505,12 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
                                 m.attachment!.isNotEmpty) ...[
                               InkWell(
                                 onTap: () => _openAttachment(m.attachment!),
-                                child: _isImageUrl(m.attachment!)
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Image.network(
-                                          m.attachment!,
-                                          width:
-                                              MediaQuery.of(
-                                                context,
-                                              ).size.width *
-                                              0.6,
-                                          height: 180,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  const Icon(
-                                                    Icons.broken_image,
-                                                    color:
-                                                        AppColors.textTertiary,
-                                                  ),
-                                        ),
-                                      )
-                                    : Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.attach_file,
-                                            size: 18,
-                                            color: mine
-                                                ? Colors.white
-                                                : AppColors.primary,
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Flexible(
-                                            child: Text(
-                                              'Pièce jointe',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: mine
-                                                    ? Colors.white
-                                                    : AppColors.primary,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                child: AppAttachmentPreview(
+                                  source: m.attachment!,
+                                  inverse: mine,
+                                  maxWidth:
+                                      MediaQuery.sizeOf(context).width * 0.6,
+                                ),
                               ),
                               if (m.content != null) const SizedBox(height: 8),
                             ],
@@ -909,25 +857,13 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
             const SizedBox(height: 12),
             InkWell(
               onTap: () => launchUrl(Uri.parse(sub.attachment!)),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.attach_file,
-                    size: 16,
-                    color: AppColors.primary,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      'Voir la pièce jointe',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppColors.primary,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
-                ],
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: double.infinity,
+                child: AppAttachmentPreview(
+                  source: sub.attachment!,
+                  imageHeight: 150,
+                ),
               ),
             ),
           ],
@@ -997,11 +933,7 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
   }
 
   Widget _submissionStatus(String status) {
-    final color = status == 'approved'
-        ? AppColors.success
-        : status == 'rejected'
-        ? AppColors.error
-        : AppColors.primary;
+    final color = AppStatus.submissionColor(status);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1010,7 +942,7 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        status.toUpperCase(),
+        AppStatus.submissionLabel(status),
         style: GoogleFonts.inter(
           fontSize: 10,
           fontWeight: FontWeight.w700,
@@ -1264,8 +1196,23 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
                             .pickFiles();
                         if (result != null &&
                             result.files.single.path != null) {
+                          final pickedFile = result.files.single;
+                          final sizeError = AppFileUtils.sizeError(
+                            bytes: pickedFile.size,
+                            maxBytes: AppFileUtils.maxUploadBytes,
+                          );
+                          if (sizeError != null) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(sizeError),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                            return;
+                          }
                           setModalState(() {
-                            selectedFile = File(result.files.single.path!);
+                            selectedFile = File(pickedFile.path!);
                           });
                         }
                       },
@@ -1293,7 +1240,9 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
                             Expanded(
                               child: Text(
                                 selectedFile != null
-                                    ? selectedFile!.path.split('/').last
+                                    ? AppFileUtils.displayName(
+                                        selectedFile!.path,
+                                      )
                                     : 'Sélectionner un fichier',
                                 style: GoogleFonts.inter(
                                   color: selectedFile != null

@@ -6,6 +6,9 @@ import 'package:dio/dio.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_status.dart';
+import '../../../core/utils/file_utils.dart';
+import '../../../core/widgets/attachment_preview.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/services/websocket_service.dart';
@@ -112,31 +115,11 @@ class _State extends State<BrandCollaborationDetailsScreen> {
   }
 
   String _statusLabel(String status) {
-    switch (status) {
-      case 'completed':
-        return 'Terminée';
-      case 'cancelled':
-        return 'Annulée';
-      case 'active':
-      case 'in_progress':
-        return 'En cours';
-      default:
-        return status;
-    }
+    return AppStatus.collaborationLabel(status);
   }
 
   Color _statusColor(String status) {
-    switch (status) {
-      case 'completed':
-        return AppColors.success;
-      case 'cancelled':
-        return AppColors.error;
-      case 'active':
-      case 'in_progress':
-        return AppColors.warning;
-      default:
-        return AppColors.textSecondary;
-    }
+    return AppStatus.collaborationColor(status);
   }
 
   Future<void> _completeCollaboration() async {
@@ -325,11 +308,24 @@ class _State extends State<BrandCollaborationDetailsScreen> {
     if (result == null || result.files.single.path == null) return;
 
     try {
-      final path = result.files.single.path!;
+      final pickedFile = result.files.single;
+      final sizeError = AppFileUtils.sizeError(
+        bytes: pickedFile.size,
+        maxBytes: AppFileUtils.maxUploadBytes,
+      );
+      if (sizeError != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(sizeError), backgroundColor: AppColors.error),
+        );
+        return;
+      }
+
+      final path = pickedFile.path!;
       final formData = FormData.fromMap({
         'attachment': await MultipartFile.fromFile(
           path,
-          filename: result.files.single.name,
+          filename: pickedFile.name,
         ),
       });
       await ApiService().sendCollaborationMessage(widget.id, formData);
@@ -344,13 +340,6 @@ class _State extends State<BrandCollaborationDetailsScreen> {
         );
       }
     }
-  }
-
-  bool _isImageUrl(String url) {
-    return RegExp(
-      r'\.(jpg|jpeg|png|gif|webp|bmp)(\?.*)?$',
-      caseSensitive: false,
-    ).hasMatch(url);
   }
 
   Future<void> _openAttachment(String url) async {
@@ -613,53 +602,12 @@ class _State extends State<BrandCollaborationDetailsScreen> {
                                 msg.attachment!.isNotEmpty) ...[
                               InkWell(
                                 onTap: () => _openAttachment(msg.attachment!),
-                                child: _isImageUrl(msg.attachment!)
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Image.network(
-                                          msg.attachment!,
-                                          width:
-                                              MediaQuery.of(
-                                                context,
-                                              ).size.width *
-                                              0.6,
-                                          height: 180,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  const Icon(
-                                                    Icons.broken_image,
-                                                    color:
-                                                        AppColors.textTertiary,
-                                                  ),
-                                        ),
-                                      )
-                                    : Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.attach_file,
-                                            size: 18,
-                                            color: isMine
-                                                ? Colors.white
-                                                : AppColors.primary,
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Flexible(
-                                            child: Text(
-                                              'Pièce jointe',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: isMine
-                                                    ? Colors.white
-                                                    : AppColors.primary,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                child: AppAttachmentPreview(
+                                  source: msg.attachment!,
+                                  inverse: isMine,
+                                  maxWidth:
+                                      MediaQuery.sizeOf(context).width * 0.6,
+                                ),
                               ),
                               if (msg.content != null)
                                 const SizedBox(height: 8),
@@ -799,23 +747,17 @@ class _State extends State<BrandCollaborationDetailsScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: sub.status == 'approved'
-                          ? AppColors.success.withValues(alpha: 0.1)
-                          : sub.status == 'rejected'
-                          ? AppColors.error.withValues(alpha: 0.1)
-                          : AppColors.primary.withValues(alpha: 0.1),
+                      color: AppStatus.submissionColor(
+                        sub.status,
+                      ).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      sub.status.toUpperCase(),
+                      AppStatus.submissionLabel(sub.status),
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: sub.status == 'approved'
-                            ? AppColors.success
-                            : sub.status == 'rejected'
-                            ? AppColors.error
-                            : AppColors.primary,
+                        color: AppStatus.submissionColor(sub.status),
                       ),
                     ),
                   ),
@@ -839,25 +781,13 @@ class _State extends State<BrandCollaborationDetailsScreen> {
                 const SizedBox(height: 12),
                 InkWell(
                   onTap: () => launchUrl(Uri.parse(sub.attachment!)),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.attach_file,
-                        size: 16,
-                        color: AppColors.primary,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          'Voir la pièce jointe',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: AppColors.primary,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ],
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: AppAttachmentPreview(
+                      source: sub.attachment!,
+                      imageHeight: 150,
+                    ),
                   ),
                 ),
               ],

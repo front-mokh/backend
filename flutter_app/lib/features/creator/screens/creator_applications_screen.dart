@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_status.dart';
+import '../../../core/widgets/app_state_widgets.dart';
 
 class CreatorApplicationsScreen extends StatefulWidget {
   const CreatorApplicationsScreen({super.key});
@@ -16,6 +18,7 @@ class _State extends State<CreatorApplicationsScreen> {
   final _searchController = TextEditingController();
   List<Application> _applications = [];
   bool _isLoading = true;
+  String? _errorMessage;
   String _statusFilter = 'all';
 
   @override
@@ -30,18 +33,29 @@ class _State extends State<CreatorApplicationsScreen> {
     super.dispose();
   }
 
-  Future<void> _load() async {
-    if (mounted) setState(() => _isLoading = true);
+  Future<void> _load({bool showLoading = true}) async {
+    if (showLoading && mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
     try {
       final data = await ApiService().getMyApplications();
       if (mounted) {
         setState(() {
           _applications = data;
           _isLoading = false;
+          _errorMessage = null;
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = ApiService.messageFromError(e);
+        });
+      }
     }
   }
 
@@ -79,29 +93,11 @@ class _State extends State<CreatorApplicationsScreen> {
   }
 
   Color _statusColor(String s) {
-    switch (s) {
-      case 'pending':
-        return AppColors.warning;
-      case 'accepted':
-        return AppColors.success;
-      case 'rejected':
-        return AppColors.error;
-      default:
-        return AppColors.textTertiary;
-    }
+    return AppStatus.applicationColor(s);
   }
 
   String _statusLabel(String s) {
-    switch (s) {
-      case 'pending':
-        return 'En attente';
-      case 'accepted':
-        return 'Acceptée';
-      case 'rejected':
-        return 'Refusée';
-      default:
-        return s;
-    }
+    return AppStatus.applicationLabel(s);
   }
 
   @override
@@ -109,36 +105,52 @@ class _State extends State<CreatorApplicationsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            )
+          ? const AppLoadingState()
           : Column(
               children: [
                 _buildHeader(),
-                Expanded(
-                  child: _applications.isEmpty
-                      ? _emptyState(
-                          'Aucune candidature',
-                          'Postulez aux annonces pour commencer',
-                        )
-                      : _filteredApplications.isEmpty
-                      ? _emptyState(
-                          'Aucun résultat',
-                          'Aucune candidature ne correspond aux filtres',
-                        )
-                      : RefreshIndicator(
-                          color: AppColors.primary,
-                          onRefresh: _load,
-                          child: ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _filteredApplications.length,
-                            itemBuilder: (_, i) =>
-                                _applicationCard(_filteredApplications[i]),
-                          ),
-                        ),
-                ),
+                Expanded(child: _buildBodyState()),
               ],
             ),
+    );
+  }
+
+  Widget _buildBodyState() {
+    if (_errorMessage != null && _applications.isEmpty) {
+      return AppRefreshableState(
+        onRefresh: () => _load(showLoading: false),
+        child: AppErrorState(message: _errorMessage!, onRetry: () => _load()),
+      );
+    }
+
+    if (_applications.isEmpty) {
+      return AppRefreshableState(
+        onRefresh: () => _load(showLoading: false),
+        child: _emptyState(
+          'Aucune candidature',
+          'Postulez aux annonces pour commencer',
+        ),
+      );
+    }
+
+    if (_filteredApplications.isEmpty) {
+      return AppRefreshableState(
+        onRefresh: () => _load(showLoading: false),
+        child: _emptyState(
+          'Aucun résultat',
+          'Aucune candidature ne correspond aux filtres',
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () => _load(showLoading: false),
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        itemCount: _filteredApplications.length,
+        itemBuilder: (_, i) => _applicationCard(_filteredApplications[i]),
+      ),
     );
   }
 

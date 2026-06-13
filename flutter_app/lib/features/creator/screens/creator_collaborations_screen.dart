@@ -9,6 +9,8 @@ import '../../../core/providers/auth_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/websocket_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_status.dart';
+import '../../../core/widgets/app_state_widgets.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class CreatorCollaborationsScreen extends StatefulWidget {
@@ -22,6 +24,7 @@ class _State extends State<CreatorCollaborationsScreen> {
   final _searchController = TextEditingController();
   List<Collaboration> _collaborations = [];
   bool _isLoading = true;
+  String? _errorMessage;
   String _filter = 'all';
   StreamSubscription<Map<String, dynamic>>? _messageSubscription;
   final Set<int> _subscribedCollaborationIds = {};
@@ -46,18 +49,29 @@ class _State extends State<CreatorCollaborationsScreen> {
   }
 
   Future<void> _load({bool showLoading = true}) async {
-    if (showLoading && mounted) setState(() => _isLoading = true);
+    if (showLoading && mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
     try {
       final data = await ApiService().getCollaborations();
       if (mounted) {
         setState(() {
           _collaborations = data;
           _isLoading = false;
+          _errorMessage = null;
         });
         await _syncRealtimeSubscriptions();
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = ApiService.messageFromError(e);
+        });
+      }
     }
   }
 
@@ -134,59 +148,49 @@ class _State extends State<CreatorCollaborationsScreen> {
         children: [
           _buildHeader(),
           Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  )
-                : _collaborations.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLightest,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.work_outline,
-                            size: 40,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Aucune collaboration',
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.text,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : _filteredCollaborations.isEmpty
-                ? Center(
-                    child: Text(
-                      'Aucune collaboration ne correspond aux filtres',
-                      style: GoogleFonts.inter(color: AppColors.textSecondary),
-                      textAlign: TextAlign.center,
-                    ),
-                  )
-                : RefreshIndicator(
-                    color: AppColors.primary,
-                    onRefresh: _load,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _filteredCollaborations.length,
-                      itemBuilder: (_, i) => _card(_filteredCollaborations[i]),
-                    ),
-                  ),
+            child: _isLoading ? const AppLoadingState() : _buildBodyState(),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBodyState() {
+    if (_errorMessage != null && _collaborations.isEmpty) {
+      return AppRefreshableState(
+        onRefresh: () => _load(showLoading: false),
+        child: AppErrorState(message: _errorMessage!, onRetry: () => _load()),
+      );
+    }
+
+    if (_collaborations.isEmpty) {
+      return AppRefreshableState(
+        onRefresh: () => _load(showLoading: false),
+        child: const AppEmptyState(
+          icon: Icons.work_outline,
+          title: 'Aucune collaboration',
+        ),
+      );
+    }
+
+    if (_filteredCollaborations.isEmpty) {
+      return AppRefreshableState(
+        onRefresh: () => _load(showLoading: false),
+        child: const AppEmptyState(
+          icon: Icons.search_off,
+          title: 'Aucun résultat',
+          message: 'Aucune collaboration ne correspond aux filtres',
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () => _load(showLoading: false),
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        itemCount: _filteredCollaborations.length,
+        itemBuilder: (_, i) => _card(_filteredCollaborations[i]),
       ),
     );
   }
@@ -281,33 +285,11 @@ class _State extends State<CreatorCollaborationsScreen> {
   }
 
   String _getStatusLabel(String status) {
-    switch (status) {
-      case 'active':
-        return 'Actif';
-      case 'in_progress':
-        return 'En cours';
-      case 'completed':
-        return 'Terminé';
-      case 'cancelled':
-        return 'Annulé';
-      default:
-        return status;
-    }
+    return AppStatus.collaborationLabel(status);
   }
 
   Color _getStatusColor(String status) {
-    switch (status) {
-      case 'active':
-        return Colors.blue;
-      case 'in_progress':
-        return Colors.orange;
-      case 'completed':
-        return AppColors.success;
-      case 'cancelled':
-        return AppColors.error;
-      default:
-        return AppColors.textSecondary;
-    }
+    return AppStatus.collaborationColor(status);
   }
 
   Widget _card(Collaboration c) {
