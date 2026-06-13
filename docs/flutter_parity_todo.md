@@ -107,13 +107,13 @@
 ## Priority 3: MVP Product Functionality
 
 - Social metrics and account verification:
-  - [ ] Add a `creator_social_accounts` backend table for connected platform accounts, OAuth tokens, handle, platform user id, follower/subscriber count, sync status, last synced timestamp, and verification status.
-  - [ ] Add creator UI to connect official social accounts instead of only entering profile links manually.
-  - [ ] Add Instagram/Meta integration using official APIs where supported, with creator consent and admin/app-review requirements documented.
-  - [ ] Add TikTok integration using official Login/Display APIs where supported, with creator consent and app-review requirements documented.
-  - [ ] Add YouTube channel stats sync using YouTube Data API for public subscriber/video/view counts where available.
+  - [ ] Add a `creator_social_accounts` backend table for platform, profile URL, handle, platform user id, follower/subscriber count, source, confidence, sync status, last synced timestamp, and verification status.
+  - [ ] Add creator onboarding/profile fields for social profile URLs/handles that our backend can enrich without requiring creator OAuth.
+  - [ ] Add YouTube public channel stats sync using YouTube Data API for subscriber/video/view counts where available.
+  - [ ] Add Instagram/Meta public-business discovery where official APIs allow our app to read public Business/Creator account metrics without each creator connecting their account.
+  - [ ] Add TikTok follower-count strategy: official no-OAuth lookup if available, otherwise manual/admin verification or a vetted data provider; do not rely on fragile scraping as the core path.
   - [ ] Add a manual follower-count fallback with screenshot/admin verification for platforms or account types that cannot be synced automatically.
-  - [ ] Store social metric snapshots so brands can see last verified count and last sync date, not just a raw number.
+  - [ ] Store social metric snapshots so brands can see last verified count, source, confidence, and last sync date, not just a raw number.
 - Reviews and trust:
   - [ ] Add post-collaboration brand-to-creator rating/review.
   - [ ] Add post-collaboration creator-to-brand rating/review.

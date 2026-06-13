@@ -127,7 +127,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - Notification route mapping covers the known routes from this pass, but every backend notification type still needs real-device tap testing.
 - Backend feature tests should still be added for announcement creation permissions and collaboration completion permissions.
 - New `/api/creators` endpoint is intentionally brand-only and returns the first 100 onboarded creators; pagination can be added when creator volume grows.
-- Social follower counts should be collected through official APIs or manual/admin verification; scraping public profile pages is risky and should not be treated as the core strategy.
+- Social follower counts should favor backend enrichment from public profile URLs/handles where official APIs allow it, without requiring creator OAuth for MVP. Manual/admin verification remains the fallback; scraping public profile pages is risky and should not be treated as the core strategy.
 
 ## Worktree Notes
 
