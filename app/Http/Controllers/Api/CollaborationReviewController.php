@@ -7,11 +7,13 @@ use App\Models\Collaboration;
 use App\Models\CollaborationReview;
 use App\Services\NotificationService;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class CollaborationReviewController extends Controller
 {
+    private const DUPLICATE_REVIEW_MESSAGE = 'Vous avez déjà laissé un avis pour cette collaboration.';
+
     public function store(Request $request, Collaboration $collaboration)
     {
         $user = $request->user();
@@ -38,7 +40,6 @@ class CollaborationReviewController extends Controller
             'professionalism_rating' => ['nullable', 'integer', 'min:1', 'max:5'],
             'would_work_again' => ['nullable', 'boolean'],
             'public_comment' => ['nullable', 'string', 'max:2000'],
-            'status' => ['nullable', Rule::in(['published'])],
         ]);
 
         $reviewedUser = $user->id === $collaboration->brand_id
@@ -97,15 +98,30 @@ class CollaborationReviewController extends Controller
         return $collaboration->brand_id === $userId || $collaboration->creator_id === $userId;
     }
 
-    private function duplicateReviewResponse()
+    private function duplicateReviewResponse(): JsonResponse
     {
         return response()->json([
-            'message' => 'Vous avez déjà laissé un avis pour cette collaboration.',
+            'message' => self::DUPLICATE_REVIEW_MESSAGE,
         ], 422);
     }
 
     private function isDuplicateReviewException(QueryException $exception): bool
     {
-        return in_array((string) $exception->getCode(), ['23000', '23505'], true);
+        $sqlState = (string) ($exception->errorInfo[0] ?? $exception->getCode());
+        $driverCode = (string) ($exception->errorInfo[1] ?? '');
+        $message = $exception->getMessage();
+        $constraintMessages = [
+            'collaboration_reviews_collaboration_id_reviewer_id_unique',
+            'UNIQUE constraint failed: collaboration_reviews.collaboration_id, collaboration_reviews.reviewer_id',
+        ];
+
+        foreach ($constraintMessages as $constraintMessage) {
+            if (str_contains($message, $constraintMessage)) {
+                return true;
+            }
+        }
+
+        return $sqlState === '23505'
+            || ($sqlState === '23000' && $driverCode === '1062');
     }
 }

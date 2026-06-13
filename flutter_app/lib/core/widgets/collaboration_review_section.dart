@@ -365,170 +365,180 @@ class _CollaborationReviewSectionState
             }
 
             final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-            return SafeArea(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(20, 18, 20, bottomInset + 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Center(
-                            child: Container(
-                              width: 42,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: AppColors.border,
-                                borderRadius: BorderRadius.circular(100),
+            return PopScope(
+              canPop: !_isSubmitting,
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(20, 18, 20, bottomInset + 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Center(
+                              child: Container(
+                                width: 42,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: AppColors.border,
+                                  borderRadius: BorderRadius.circular(100),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        IconButton(
-                          onPressed: _isSubmitting
-                              ? null
-                              : () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.close_rounded),
-                          color: AppColors.textSecondary,
-                          tooltip: 'Fermer',
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Avis sur ${widget.reviewedName}',
-                      style: GoogleFonts.inter(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.text,
+                          IconButton(
+                            onPressed: _isSubmitting
+                                ? null
+                                : () => Navigator.of(context).pop(),
+                            icon: const Icon(Icons.close_rounded),
+                            color: AppColors.textSecondary,
+                            tooltip: 'Fermer',
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Notez votre expérience après cette collaboration.',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    _ratingRow(
-                      label: 'Note globale',
-                      value: rating,
-                      isRequired: true,
-                      onChanged: (value) => setSheetState(() => rating = value),
-                    ),
-                    const SizedBox(height: 12),
-                    _ratingRow(
-                      label: 'Communication',
-                      value: communicationRating,
-                      onChanged: (value) =>
-                          setSheetState(() => communicationRating = value),
-                    ),
-                    _ratingRow(
-                      label: 'Qualité',
-                      value: qualityRating,
-                      onChanged: (value) =>
-                          setSheetState(() => qualityRating = value),
-                    ),
-                    _ratingRow(
-                      label: 'Fiabilité',
-                      value: reliabilityRating,
-                      onChanged: (value) =>
-                          setSheetState(() => reliabilityRating = value),
-                    ),
-                    _ratingRow(
-                      label: 'Professionnalisme',
-                      value: professionalismRating,
-                      onChanged: (value) =>
-                          setSheetState(() => professionalismRating = value),
-                    ),
-                    const SizedBox(height: 14),
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      value: wouldWorkAgain,
-                      activeThumbColor: AppColors.primary,
-                      activeTrackColor: AppColors.primary.withValues(
-                        alpha: 0.32,
-                      ),
-                      onChanged: (value) =>
-                          setSheetState(() => wouldWorkAgain = value),
-                      title: Text(
-                        'Je retravaillerais avec ce profil',
+                      const SizedBox(height: 10),
+                      Text(
+                        'Avis sur ${widget.reviewedName}',
                         style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
                           color: AppColors.text,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: commentController,
-                      minLines: 3,
-                      maxLines: 5,
-                      maxLength: 2000,
-                      decoration: InputDecoration(
-                        labelText: 'Commentaire public',
-                        hintText: 'Décrivez ce qui s’est bien passé...',
-                        labelStyle: GoogleFonts.inter(
+                      const SizedBox(height: 4),
+                      Text(
+                        'Notez votre expérience après cette collaboration.',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
                           color: AppColors.textSecondary,
                         ),
-                        hintStyle: GoogleFonts.inter(
-                          color: AppColors.placeholder,
+                      ),
+                      const SizedBox(height: 20),
+                      _ratingRow(
+                        label: 'Note globale',
+                        value: rating,
+                        isRequired: true,
+                        onChanged: (value) =>
+                            setSheetState(() => rating = value),
+                      ),
+                      const SizedBox(height: 12),
+                      _ratingRow(
+                        label: 'Communication',
+                        value: communicationRating,
+                        onChanged: (value) =>
+                            setSheetState(() => communicationRating = value),
+                      ),
+                      _ratingRow(
+                        label: 'Qualité',
+                        value: qualityRating,
+                        onChanged: (value) =>
+                            setSheetState(() => qualityRating = value),
+                      ),
+                      _ratingRow(
+                        label: 'Fiabilité',
+                        value: reliabilityRating,
+                        onChanged: (value) =>
+                            setSheetState(() => reliabilityRating = value),
+                      ),
+                      _ratingRow(
+                        label: 'Professionnalisme',
+                        value: professionalismRating,
+                        onChanged: (value) =>
+                            setSheetState(() => professionalismRating = value),
+                      ),
+                      const SizedBox(height: 14),
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        value: wouldWorkAgain,
+                        activeThumbColor: AppColors.primary,
+                        activeTrackColor: AppColors.primary.withValues(
+                          alpha: 0.32,
                         ),
-                        filled: true,
-                        fillColor: AppColors.background,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: AppColors.primary,
+                        onChanged: (value) =>
+                            setSheetState(() => wouldWorkAgain = value),
+                        title: Text(
+                          'Je retravaillerais avec ce profil',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.text,
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: rating == 0 || _isSubmitting ? null : submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: commentController,
+                        minLines: 3,
+                        maxLines: 5,
+                        maxLength: 2000,
+                        decoration: InputDecoration(
+                          labelText: 'Commentaire public',
+                          hintText: 'Décrivez ce qui s’est bien passé...',
+                          labelStyle: GoogleFonts.inter(
+                            color: AppColors.textSecondary,
+                          ),
+                          hintStyle: GoogleFonts.inter(
+                            color: AppColors.placeholder,
+                          ),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                              color: AppColors.border,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                              color: AppColors.border,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Text(
-                                'Publier l’avis',
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: rating == 0 || _isSubmitting
+                              ? null
+                              : submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Text(
+                                  'Publier l’avis',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
