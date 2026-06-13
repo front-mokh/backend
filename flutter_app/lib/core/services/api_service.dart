@@ -545,6 +545,23 @@ class ApiService {
     return Collaboration.fromJson(response.data);
   }
 
+  Future<MessagePage> getCollaborationMessages(
+    int id, {
+    int? beforeId,
+    int limit = 30,
+  }) async {
+    final params = <String, dynamic>{'limit': limit.toString()};
+    if (beforeId != null) {
+      params['before_id'] = beforeId.toString();
+    }
+
+    final response = await _dio.get(
+      '/collaborations/$id/messages',
+      queryParameters: params,
+    );
+    return MessagePage.fromJson(response.data);
+  }
+
   Future<Collaboration> updateCollaborationStatus(int id, String status) async {
     final response = await _dio.patch(
       '/collaborations/$id/status',

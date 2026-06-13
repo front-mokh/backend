@@ -25,8 +25,15 @@ class CreatorCollaborationDetailsScreen extends StatefulWidget {
 }
 
 class _State extends State<CreatorCollaborationDetailsScreen> {
+  static const int _messagePageSize = 30;
+
   Collaboration? _collab;
   bool _isLoading = true;
+  bool _isLoadingMessages = false;
+  bool _isLoadingOlderMessages = false;
+  bool _hasMoreMessages = false;
+  int? _nextMessagesCursor;
+  String? _messagesError;
   final _msgController = TextEditingController();
   final _scrollController = ScrollController();
   Timer? _heartbeatTimer;
@@ -61,21 +68,7 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
       }
 
       final currentUserId = context.read<AuthProvider>().user?.id;
-      setState(() {
-        _collab!.messages ??= [];
-        if (!_collab!.messages!.any((m) => m.id == message.id)) {
-          _collab!.messages!.add(message);
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_scrollController.hasClients) {
-              _scrollController.animateTo(
-                _scrollController.position.maxScrollExtent,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOut,
-              );
-            }
-          });
-        }
-      });
+      _appendMessage(message);
 
       if (message.senderId != currentUserId) {
         _markAsRead();
@@ -107,17 +100,104 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
           _isLoading = false;
         });
       }
+      await _loadLatestMessages(scrollToBottom: true);
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadLatestMessages({bool scrollToBottom = false}) async {
+    if (_collab == null || _isLoadingMessages) return;
+
+    setState(() {
+      _isLoadingMessages = true;
+      _messagesError = null;
+    });
+
+    try {
+      final page = await ApiService().getCollaborationMessages(
+        widget.id,
+        limit: _messagePageSize,
+      );
+      if (!mounted || _collab == null) return;
+
+      setState(() {
+        _collab = _collab!.copyWith(messages: page.data);
+        _hasMoreMessages = page.hasMore;
+        _nextMessagesCursor = page.nextCursor;
+        _isLoadingMessages = false;
+      });
+
+      if (scrollToBottom) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _scrollToBottom(animated: false),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messagesError = ApiService.messageFromError(e);
+        _isLoadingMessages = false;
+      });
+    }
+  }
+
+  Future<void> _loadOlderMessages() async {
+    final collaboration = _collab;
+    final cursor = _nextMessagesCursor;
+    if (collaboration == null ||
+        cursor == null ||
+        !_hasMoreMessages ||
+        _isLoadingOlderMessages) {
+      return;
+    }
+
+    final previousExtent = _scrollController.hasClients
+        ? _scrollController.position.maxScrollExtent
+        : null;
+
+    setState(() => _isLoadingOlderMessages = true);
+
+    try {
+      final page = await ApiService().getCollaborationMessages(
+        widget.id,
+        beforeId: cursor,
+        limit: _messagePageSize,
+      );
+      if (!mounted || _collab == null) return;
+
+      final currentMessages = _collab!.messages ?? [];
+      final currentIds = currentMessages.map((message) => message.id).toSet();
+      final olderMessages = page.data
+          .where((message) => !currentIds.contains(message.id))
+          .toList();
+
+      setState(() {
+        _collab = _collab!.copyWith(
+          messages: [...olderMessages, ...currentMessages],
+        );
+        _hasMoreMessages = page.hasMore;
+        _nextMessagesCursor = page.nextCursor;
+        _isLoadingOlderMessages = false;
+      });
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
+        if (!_scrollController.hasClients || previousExtent == null) return;
+        final delta =
+            _scrollController.position.maxScrollExtent - previousExtent;
+        if (delta > 0) {
+          _scrollController.jumpTo(_scrollController.offset + delta);
         }
       });
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() => _isLoadingOlderMessages = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ApiService.messageFromError(e)),
+          backgroundColor: AppColors.error,
+        ),
+      );
     }
   }
 
@@ -168,6 +248,42 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
     });
   }
 
+  void _appendMessage(Message message) {
+    if (!mounted || _collab == null || message.collaborationId != widget.id) {
+      return;
+    }
+
+    var added = false;
+    setState(() {
+      final messages = [...(_collab!.messages ?? <Message>[])];
+      if (!messages.any((existing) => existing.id == message.id)) {
+        messages.add(message);
+        messages.sort((a, b) => a.id.compareTo(b.id));
+        added = true;
+      }
+      _collab = _collab!.copyWith(messages: messages);
+    });
+
+    if (added) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    }
+  }
+
+  void _scrollToBottom({bool animated = true}) {
+    if (!_scrollController.hasClients) return;
+
+    final target = _scrollController.position.maxScrollExtent;
+    if (animated) {
+      _scrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    } else {
+      _scrollController.jumpTo(target);
+    }
+  }
+
   Future<void> _send() async {
     if (_isCollaborationLocked) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -182,11 +298,11 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
     if (text.isEmpty) return;
     _msgController.clear();
     try {
-      await ApiService().sendCollaborationMessage(
+      final message = await ApiService().sendCollaborationMessage(
         widget.id,
         FormData.fromMap({'content': text}),
       );
-      _load();
+      _appendMessage(message);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -245,8 +361,11 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
           filename: pickedFile.name,
         ),
       });
-      await ApiService().sendCollaborationMessage(widget.id, formData);
-      _load();
+      final message = await ApiService().sendCollaborationMessage(
+        widget.id,
+        formData,
+      );
+      _appendMessage(message);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -456,10 +575,19 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
 
   Widget _buildMessagesTab() {
     final myId = context.read<AuthProvider>().user?.id;
+    final messages = _collab?.messages ?? [];
+    final showOlderControl = _hasMoreMessages || _isLoadingOlderMessages;
+
     return Column(
       children: [
         Expanded(
-          child: _collab?.messages?.isEmpty ?? true
+          child: _isLoadingMessages && messages.isEmpty
+              ? const Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                )
+              : _messagesError != null && messages.isEmpty
+              ? _messagesErrorState()
+              : messages.isEmpty
               ? Center(
                   child: Text(
                     'Aucun message',
@@ -469,9 +597,13 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
               : ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.all(16),
-                  itemCount: _collab!.messages!.length,
+                  itemCount: messages.length + (showOlderControl ? 1 : 0),
                   itemBuilder: (_, i) {
-                    final m = _collab!.messages![i];
+                    if (showOlderControl && i == 0) {
+                      return _olderMessagesControl();
+                    }
+
+                    final m = messages[i - (showOlderControl ? 1 : 0)];
                     final mine = m.senderId == myId;
                     return Align(
                       alignment: mine
@@ -534,6 +666,63 @@ class _State extends State<CreatorCollaborationDetailsScreen> {
         ),
         _isCollaborationLocked ? _lockedFooter() : _messageComposer(),
       ],
+    );
+  }
+
+  Widget _olderMessagesControl() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Center(
+        child: _isLoadingOlderMessages
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primary,
+                ),
+              )
+            : TextButton.icon(
+                onPressed: _loadOlderMessages,
+                icon: const Icon(Icons.history, size: 18),
+                label: Text(
+                  'Voir les messages précédents',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _messagesErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.sms_failed_outlined,
+              color: AppColors.textTertiary,
+              size: 36,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _messagesError!,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => _loadLatestMessages(scrollToBottom: true),
+              child: Text(
+                'Réessayer',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

@@ -7,7 +7,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 ## Current Status
 
 - Flutter app exists in `flutter_app/` and is now connected more closely to the Laravel backend.
-- Collaboration chat now supports realtime messages, realtime read receipts, visible sent/seen states, and live unread badges in collaboration lists.
+- Collaboration chat now supports cursor-paginated history loading, realtime messages, realtime read receipts, visible sent/seen states, and live unread badges in collaboration lists.
 - Onboarding now keeps draft state live while users type and gives incomplete-profile users a clear logout path.
 - Creator/brand onboarding retries now update existing profiles instead of crashing with duplicate-profile errors.
 - Creator/brand onboarding completion now refreshes state safely after submit and no longer loops back to the profile info step when social links serialize booleans as `0/1`.
@@ -83,6 +83,9 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 - [x] Added Flutter token registration on login/session restore, token cleanup on logout, foreground notification display, and notification tap deep-link handling.
 - [x] Added backend feature tests for push-token registration, validation, deletion, and legacy Expo compatibility.
 - [x] Deployed the push-token backend files to the VPS, ran `php artisan migrate --force`, cleared caches, and restarted `celebrity_back`.
+- [x] Added `GET /api/collaborations/{collaboration}/messages` with cursor pagination, authorization, and a message lookup index.
+- [x] Updated brand and creator Flutter collaboration chats to load the latest 30 messages first and load older messages on request.
+- [x] Kept realtime message append/read-receipt behavior working without re-fetching the full collaboration after every send.
 
 ## Missing Or Stubbed Flutter Screens
 
@@ -98,7 +101,7 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 
 ## Verified
 
-- [x] `php artisan test` passes: 44 tests, 160 assertions.
+- [x] `php artisan test` passes: 46 tests, 171 assertions.
 - [x] `flutter analyze` passes with no issues.
 - [x] `flutter test` passes.
 - [x] `flutter build apk --release` passes after FCM dependencies.
@@ -126,15 +129,16 @@ Use this file as the quick handoff between sessions. The detailed roadmap lives 
 ## Worktree Notes
 
 - Expected new/changed files from this pass include:
+  - `app/Http/Controllers/Api/CollaborationController.php`
+  - `routes/api.php`
+  - `database/migrations/2026_06_13_000002_add_cursor_index_to_messages_table.php`
+  - `tests/Feature/ChatReadTrackingTest.php`
+  - `flutter_app/lib/core/models/models.dart`
+  - `flutter_app/lib/core/services/api_service.dart`
+  - `flutter_app/lib/features/brand/screens/collaboration_details_screen.dart`
+  - `flutter_app/lib/features/creator/screens/creator_collaboration_details_screen.dart`
   - `docs/flutter_parity_todo.md`
   - `docs/flutter_progress_tracker.md`
-  - `app/Http/Controllers/Api/NotificationController.php`
-  - `app/Models/PushDeviceToken.php`
-  - `app/Services/FcmPushService.php`
-  - `app/Services/NotificationService.php`
-  - `database/migrations/2026_06_13_000001_create_push_device_tokens_table.php`
-  - `tests/Feature/PushDeviceTokenTest.php`
-  - `flutter_app/lib/core/services/push_notification_service.dart`
 - Existing unrelated or pre-existing worktree items seen during this pass:
   - `eas.json`
   - `app.json`

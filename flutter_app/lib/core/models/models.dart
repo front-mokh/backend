@@ -628,6 +628,26 @@ class Message {
   };
 }
 
+class MessagePage {
+  final List<Message> data;
+  final int? nextCursor;
+  final bool hasMore;
+
+  MessagePage({
+    required this.data,
+    required this.nextCursor,
+    required this.hasMore,
+  });
+
+  factory MessagePage.fromJson(Map<String, dynamic> json) => MessagePage(
+    data: (json['data'] as List<dynamic>? ?? [])
+        .map((e) => Message.fromJson(e))
+        .toList(),
+    nextCursor: nullableIntFromJson(json['next_cursor']),
+    hasMore: boolFromJson(json['has_more']),
+  );
+}
+
 class DeliverableSubmission {
   final int id;
   final int collaborationId;

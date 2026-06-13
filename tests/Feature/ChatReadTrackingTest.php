@@ -117,6 +117,51 @@ class ChatReadTrackingTest extends TestCase
             ->assertJsonPath('announcement.deliverables.0.pivot.quantity', 2);
     }
 
+    public function test_participant_can_load_latest_messages_with_cursor_pagination(): void
+    {
+        [$brand, $creator, $collaboration] = $this->createCollaboration();
+
+        for ($i = 1; $i <= 35; $i++) {
+            Message::create([
+                'collaboration_id' => $collaboration->id,
+                'sender_id' => $i % 2 === 0 ? $brand->id : $creator->id,
+                'content' => "Message {$i}",
+                'is_read' => false,
+                'created_at' => now()->subMinutes(35 - $i),
+                'updated_at' => now()->subMinutes(35 - $i),
+            ]);
+        }
+
+        $this->actingAs($brand);
+
+        $firstPage = $this->getJson("/api/collaborations/{$collaboration->id}/messages?limit=10")
+            ->assertOk()
+            ->assertJsonCount(10, 'data')
+            ->assertJsonPath('data.0.content', 'Message 26')
+            ->assertJsonPath('data.9.content', 'Message 35')
+            ->assertJsonPath('has_more', true);
+
+        $cursor = $firstPage->json('next_cursor');
+
+        $this->getJson("/api/collaborations/{$collaboration->id}/messages?limit=10&before_id={$cursor}")
+            ->assertOk()
+            ->assertJsonCount(10, 'data')
+            ->assertJsonPath('data.0.content', 'Message 16')
+            ->assertJsonPath('data.9.content', 'Message 25')
+            ->assertJsonPath('has_more', true);
+    }
+
+    public function test_message_pagination_rejects_non_participants(): void
+    {
+        [, , $collaboration] = $this->createCollaboration();
+        $outsider = User::factory()->create(['type' => UserType::BRAND]);
+
+        $this->actingAs($outsider);
+
+        $this->getJson("/api/collaborations/{$collaboration->id}/messages")
+            ->assertForbidden();
+    }
+
     public function test_creator_cannot_submit_unrequested_deliverable(): void
     {
         [, $creator, $collaboration] = $this->createCollaboration();

@@ -51,6 +51,45 @@ class CollaborationController extends Controller
         );
     }
 
+    public function messages(Request $request, Collaboration $collaboration)
+    {
+        if (! $this->isParticipant($collaboration, $request->user()->id)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'limit' => 'nullable|integer|min:1|max:50',
+            'before_id' => 'nullable|integer|min:1',
+        ]);
+
+        $limit = $validated['limit'] ?? 30;
+
+        $query = $collaboration->messages()
+            ->with('sender')
+            ->latest('id');
+
+        if (! empty($validated['before_id'])) {
+            $query->where('id', '<', $validated['before_id']);
+        }
+
+        $messages = $query->limit($limit + 1)->get();
+        $hasMore = $messages->count() > $limit;
+
+        if ($hasMore) {
+            $messages = $messages->take($limit);
+        }
+
+        $messages = $messages->reverse()->values();
+
+        return response()->json([
+            'data' => $messages,
+            'next_cursor' => $hasMore && $messages->isNotEmpty()
+                ? $messages->first()->id
+                : null,
+            'has_more' => $hasMore,
+        ]);
+    }
+
     /**
      * Heartbeat — keeps presence alive while user stays in the chat screen.
      * Mobile app should call this every ~15 seconds.
@@ -342,7 +381,6 @@ class CollaborationController extends Controller
             'brand.brandProfile',
             'creator.creatorProfile',
             'application',
-            'messages.sender',
             'submissions.deliverableType',
         ]);
 

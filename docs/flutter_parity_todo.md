@@ -48,6 +48,7 @@
 - Added pre-upload size validation for onboarding images, announcement thumbnails/PDFs, chat attachments, and deliverable submission attachments.
 - Added user-visible realtime reconnection feedback in the brand and creator Flutter shells.
 - Added robust no-cost Firebase Cloud Messaging push infrastructure for Flutter: backend device-token table, token registration/removal endpoints, FCM HTTP v1 sender, Flutter token sync, foreground notifications, tap route mapping, and Android notification permission/channel setup.
+- Added cursor-paginated collaboration message history so Flutter opens chats on the latest messages and loads older messages only on request.
 
 ## Missing Or Stubbed Flutter Pages
 
@@ -107,7 +108,8 @@
 
 - [x] Add loading, empty, and error states for primary list screens.
 - [x] Add pull-to-refresh on list-heavy screens, including empty/error states.
-- Add pagination/infinite scrolling where backend responses support it.
+- [x] Add cursor pagination for collaboration chat messages.
+- Add pagination/infinite scrolling for remaining long list screens where backend responses support it.
 - [x] Standardize status labels and colors across announcements, applications, collaborations, and submissions.
 - [x] Improve attachment previews for PDF/video files.
 - [x] Add image/file size validation feedback before upload.
@@ -137,7 +139,7 @@
 ## Current Verification
 
 - Latest full pass, 2026-06-13:
-  - `php artisan test`: passing, 44 tests / 160 assertions.
+  - `php artisan test`: passing, 46 tests / 171 assertions.
   - `flutter analyze`: passing with no issues.
   - `flutter test`: passing.
 - Latest APK build after FCM push implementation, 2026-06-13:

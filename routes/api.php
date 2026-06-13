@@ -70,6 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Collaborations
     Route::get('/collaborations', [CollaborationController::class, 'index']);
+    Route::get('/collaborations/{collaboration}/messages', [CollaborationController::class, 'messages']);
     Route::get('/collaborations/{collaboration}', [CollaborationController::class, 'show']);
     Route::post('/collaborations/{collaboration}/messages', [CollaborationController::class, 'sendMessage']);
     Route::post('/collaborations/{collaboration}/heartbeat', [CollaborationController::class, 'heartbeat']);
